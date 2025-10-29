@@ -75,8 +75,10 @@ func Test{func_name}(t *testing.T) {{
         package_name: str,
         file_path: str
     ) -> str:
-        """Ginkgo BDD 测试框架提示词"""
-        return f"""请为以下Go函数生成基于Ginkgo/Gomega的BDD风格单元测试。
+        """Ginkgo BDD 测试框架提示词（只生成框架，不生成具体实现）"""
+        return f"""请为以下Go函数生成基于Ginkgo/Gomega的BDD风格单元测试框架。
+
+**重要说明：只生成测试框架代码，不要生成具体的测试实现逻辑。**
 
 ## 项目信息
 - Go模块路径: {module_path}
@@ -215,34 +217,62 @@ It("should do something", func() {{
 - 核心业务逻辑 100% 覆盖
 - 所有公开 API 都有测试
 
-## 测试要求
-1. 使用Ginkgo BDD测试框架和Gomega断言库
-2. 使用Describe/Context/It结构组织测试
-3. 使用BeforeEach进行测试前置设置（初始化对象或 mock controller）
-4. 使用AfterEach进行清理（如 ctrl.Finish() 验证 mock 期望）
-5. 覆盖场景:
-   - Normal: 正常输入的测试用例（多个典型场景）
-   - Boundary: 边界条件测试（空值、零值、极限值等）
-   - Exception: 异常输入测试（错误输入、nil指针、数据库错误等）
-6. 测试用例需要自包含（self-contained），不依赖外部状态
-7. 使用Gomega的流畅断言API
-8. 每个 Context 应该描述一个测试场景，每个 It 应该测试一个具体用例
+## 测试框架要求
+1. **只生成测试框架结构**，不要生成具体的测试实现代码
+2. 使用Ginkgo BDD的Describe/Context/It结构组织测试
+3. 每个测试场景使用 It 块，但 **It 块内只包含注释说明**，不包含实际的测试代码
+4. 在注释中详细说明：
+   - 需要测试的场景和输入
+   - 预期的输出结果
+   - 测试步骤（Arrange-Act-Assert）
+5. 覆盖三种测试场景（每种场景至少一个It块）:
+   - **Normal Case**: 正常输入场景（在注释中说明具体的输入和预期输出）
+   - **Boundary Case**: 边界条件测试（在注释中说明边界值情况）
+   - **Exception Case**: 异常输入测试（在注释中说明异常情况）
+6. 确保生成的代码能够通过 `go test -v` 编译
+7. It 块内只包含 `// TODO: 实现测试逻辑` 的占位符和详细的测试说明注释
 
-## BDD 风格测试结构
+## 测试框架结构示例
 
-**测试组织层次**:
+**只生成框架，不生成具体实现**:
 ```go
 Describe("方法名", func() {{
-    Context("when 场景描述", func() {{
-        It("should 预期行为", func() {{
-            // Arrange - 准备测试数据
-            input := testData
-
-            // Act - 执行被测试的方法
-            result := methodUnderTest(input)
-
-            // Assert - 验证结果
-            Expect(result).To(Equal(expected))
+    Context("when 正常场景", func() {{
+        It("should 返回预期结果", func() {{
+            // TODO: 实现测试逻辑
+            //
+            // 测试场景说明：
+            // - 输入参数: 参数1=值1, 参数2=值2
+            // - 预期输出: 返回值应该是XXX
+            //
+            // 测试步骤:
+            // 1. Arrange: 准备测试数据 (例如: input := "test")
+            // 2. Act: 调用被测方法 (例如: result := SomeFunction(input))
+            // 3. Assert: 验证结果 (例如: Expect(result).To(Equal("expected")))
+        }})
+    }})
+    
+    Context("when 边界条件", func() {{
+        It("should 正确处理边界值", func() {{
+            // TODO: 实现测试逻辑
+            //
+            // 测试场景说明：
+            // - 输入参数: 零值/空值/最大值等边界情况
+            // - 预期输出: 应该如何处理边界值
+            //
+            // 测试步骤说明...
+        }})
+    }})
+    
+    Context("when 异常场景", func() {{
+        It("should 返回适当错误", func() {{
+            // TODO: 实现测试逻辑
+            //
+            // 测试场景说明：
+            // - 输入参数: 无效输入/错误条件
+            // - 预期输出: 应该返回错误或特定错误信息
+            //
+            // 测试步骤说明...
         }})
     }})
 }})
@@ -260,75 +290,79 @@ Describe("CalMemory")
     It("should return integer value without decimal")
 ```
 
-## 优秀的测试模板参考
+## 测试框架模板参考
 
-### 模板1: 纯函数测试（无 Mock）
+### 模板1: 纯函数测试框架（只包含结构和注释）
 
-以下是测试纯函数的完整示例：
+以下是生成测试框架的示例（不包含具体实现）：
 
 ```go
 var _ = Describe("XdyEcsBillCase", func() {{
-    var (
-        xdyEcsBillCase *XdyEcsBillCase
-    )
-
+    // 这里可以声明共享变量，但通常为空或只声明结构体实例
+    // var xdyEcsBillCase *XdyEcsBillCase
+    
+    // BeforeEach 可以留空或只包含注释说明
     BeforeEach(func() {{
-        // 创建实例用于测试纯函数
-        // 纯函数不依赖外部服务，直接传入 nil 或简单值
-        xdyEcsBillCase = NewXdyEcsBillCase(nil, nil, nil, nil)
+        // TODO: 初始化测试对象
+        // 例如: xdyEcsBillCase = NewXdyEcsBillCase(...)
     }})
 
     Describe("CalMemory", func() {{
-        // Normal Case - 正常场景
         Context("when memory is divisible by 1024", func() {{
             It("should return integer value without decimal", func() {{
-                // Arrange - 准备测试数据
-                memoryMB := 1024
-                
-                // Act - 执行方法
-                result := xdyEcsBillCase.CalMemory(memoryMB)
-                
-                // Assert - 验证结果
-                Expect(result).To(Equal("1"))
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：测试内存值可以被1024整除的情况
+                // 输入参数: memoryMB = 1024
+                // 预期输出: 返回字符串 "1"
+                //
+                // 测试步骤:
+                // 1. Arrange: memoryMB := 1024
+                // 2. Act: result := xdyEcsBillCase.CalMemory(memoryMB)
+                // 3. Assert: Expect(result).To(Equal("1"))
             }})
 
             It("should return correct value for 2048 MB", func() {{
-                // Arrange
-                memoryMB := 2048
-                
-                // Act
-                result := xdyEcsBillCase.CalMemory(memoryMB)
-                
-                // Assert
-                Expect(result).To(Equal("2"))
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：测试2048MB的情况
+                // 输入参数: memoryMB = 2048
+                // 预期输出: 返回字符串 "2"
+                //
+                // 测试步骤:
+                // 1. Arrange: memoryMB := 2048
+                // 2. Act: result := xdyEcsBillCase.CalMemory(memoryMB)
+                // 3. Assert: Expect(result).To(Equal("2"))
             }})
         }})
 
-        // Normal Case - 带小数的正常场景
         Context("when memory has decimal places", func() {{
             It("should return value with one decimal place", func() {{
-                // Arrange
-                memoryMB := 1536 // 1.5 GB
-                
-                // Act
-                result := xdyEcsBillCase.CalMemory(memoryMB)
-                
-                // Assert
-                Expect(result).To(Equal("1.5"))
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：测试内存值有小数的情况
+                // 输入参数: memoryMB = 1536 (1.5 GB)
+                // 预期输出: 返回字符串 "1.5"
+                //
+                // 测试步骤:
+                // 1. Arrange: memoryMB := 1536
+                // 2. Act: result := xdyEcsBillCase.CalMemory(memoryMB)
+                // 3. Assert: Expect(result).To(Equal("1.5"))
             }})
         }})
 
-        // Boundary Case - 边界场景
         Context("when memory is zero", func() {{
             It("should return 0", func() {{
-                // Arrange
-                memoryMB := 0
-                
-                // Act
-                result := xdyEcsBillCase.CalMemory(memoryMB)
-                
-                // Assert
-                Expect(result).To(Equal("0"))
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：边界条件 - 内存为0的情况
+                // 输入参数: memoryMB = 0
+                // 预期输出: 返回字符串 "0"
+                //
+                // 测试步骤:
+                // 1. Arrange: memoryMB := 0
+                // 2. Act: result := xdyEcsBillCase.CalMemory(memoryMB)
+                // 3. Assert: Expect(result).To(Equal("0"))
             }})
         }})
     }})
@@ -336,188 +370,181 @@ var _ = Describe("XdyEcsBillCase", func() {{
     Describe("CalDiskCapacity", func() {{
         Context("when disk capacity is greater than present capacity", func() {{
             It("should return correct billable disk capacity", func() {{
-                result := xdyEcsBillCase.CalDiskCapacity(100, 40)
-                Expect(result).To(Equal(60))
-            }})
-
-            It("should return correct value for 80GB disk with 40GB present", func() {{
-                result := xdyEcsBillCase.CalDiskCapacity(80, 40)
-                Expect(result).To(Equal(40))
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：磁盘容量大于已使用容量
+                // 输入参数: diskCapacity = 100, presentCapacity = 40
+                // 预期输出: 返回 60 (100 - 40)
+                //
+                // 测试步骤:
+                // 1. Arrange: diskCapacity := 100, presentCapacity := 40
+                // 2. Act: result := xdyEcsBillCase.CalDiskCapacity(diskCapacity, presentCapacity)
+                // 3. Assert: Expect(result).To(Equal(60))
             }})
         }})
 
         Context("when disk capacity equals present capacity", func() {{
             It("should return 0", func() {{
-                result := xdyEcsBillCase.CalDiskCapacity(40, 40)
-                Expect(result).To(Equal(0))
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：边界条件 - 磁盘容量等于已使用容量
+                // 输入参数: diskCapacity = 40, presentCapacity = 40
+                // 预期输出: 返回 0
+                //
+                // 测试步骤:
+                // 1. Arrange: diskCapacity := 40, presentCapacity := 40
+                // 2. Act: result := xdyEcsBillCase.CalDiskCapacity(diskCapacity, presentCapacity)
+                // 3. Assert: Expect(result).To(Equal(0))
             }})
         }})
 
         Context("when disk capacity is less than present capacity", func() {{
             It("should return negative value", func() {{
-                result := xdyEcsBillCase.CalDiskCapacity(20, 40)
-                Expect(result).To(Equal(-20))
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：异常情况 - 磁盘容量小于已使用容量
+                // 输入参数: diskCapacity = 20, presentCapacity = 40
+                // 预期输出: 返回 -20 (负数表示异常)
+                //
+                // 测试步骤:
+                // 1. Arrange: diskCapacity := 20, presentCapacity := 40
+                // 2. Act: result := xdyEcsBillCase.CalDiskCapacity(diskCapacity, presentCapacity)
+                // 3. Assert: Expect(result).To(Equal(-20))
             }})
         }})
     }})
 
     Describe("CalBillStartEndTime", func() {{
         Context("when bill period overlaps with request period", func() {{
-            It("should use request end time if bill is still ongoing (billEndTime = 0)", func() {{
-                isBill, retStartTime, retEndTime := xdyEcsBillCase.CalBillStartEndTime(
-                    1630368000, // 2021-09-01 (bill start)
-                    0,          // Still ongoing
-                    1630368000, // 2021-09-01 (request start)
-                    1632960000, // 2021-09-30 (request end)
-                )
-                Expect(isBill).To(BeTrue())
-                Expect(retStartTime).To(Equal(1630368000))
-                Expect(retEndTime).To(Equal(1632960000)) // Should use request end time
+            It("should use request end time if bill is still ongoing", func() {{
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：账单周期与请求周期重叠，且账单仍在进行中
+                // 输入参数: 
+                //   billStartTime = 1630368000 (2021-09-01)
+                //   billEndTime = 0 (仍在进行)
+                //   requestStartTime = 1630368000 (2021-09-01)
+                //   requestEndTime = 1632960000 (2021-09-30)
+                // 预期输出: 
+                //   isBill = true
+                //   retStartTime = 1630368000
+                //   retEndTime = 1632960000 (使用请求结束时间)
+                //
+                // 测试步骤:
+                // 1. Arrange: 准备上述时间参数
+                // 2. Act: isBill, retStartTime, retEndTime := xdyEcsBillCase.CalBillStartEndTime(...)
+                // 3. Assert: Expect(isBill).To(BeTrue()), Expect(retEndTime).To(Equal(1632960000))
             }})
 
             It("should use bill end time if bill ends before request end", func() {{
-                isBill, retStartTime, retEndTime := xdyEcsBillCase.CalBillStartEndTime(
-                    1630368000, // 2021-09-01 (bill start)
-                    1631577600, // 2021-09-14 (bill end, before request end)
-                    1630368000, // 2021-09-01 (request start)
-                    1632960000, // 2021-09-30 (request end)
-                )
-                Expect(isBill).To(BeTrue())
-                Expect(retEndTime).To(Equal(1631577600)) // Should use bill end time
-            }})
-
-            It("should use request start time if bill starts before request", func() {{
-                isBill, retStartTime, retEndTime := xdyEcsBillCase.CalBillStartEndTime(
-                    1625097600, // 2021-07-01 (bill start)
-                    1633046400, // 2021-10-01 (bill end)
-                    1630368000, // 2021-09-01 (request start)
-                    1632960000, // 2021-09-30 (request end)
-                )
-                Expect(isBill).To(BeTrue())
-                Expect(retStartTime).To(Equal(1630368000)) // Should use request start time
-                Expect(retEndTime).To(Equal(1632960000))   // Should use request end time
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：账单在请求结束前结束
+                // 输入参数: 
+                //   billStartTime = 1630368000 (2021-09-01)
+                //   billEndTime = 1631577600 (2021-09-14, 在请求结束前)
+                //   requestStartTime = 1630368000 (2021-09-01)
+                //   requestEndTime = 1632960000 (2021-09-30)
+                // 预期输出: 
+                //   isBill = true
+                //   retEndTime = 1631577600 (使用账单结束时间)
+                //
+                // 测试步骤说明...
             }})
         }})
 
         Context("when bill period does not overlap with request period", func() {{
             It("should not bill if bill end time is before request start time", func() {{
-                isBill, _, _ := xdyEcsBillCase.CalBillStartEndTime(
-                    1625097600, // 2021-07-01
-                    1627689600, // 2021-07-31
-                    1630368000, // 2021-09-01
-                    1633046400, // 2021-10-01
-                )
-                Expect(isBill).To(BeFalse())
-            }})
-
-            It("should not bill if bill start time is after request end time", func() {{
-                isBill, _, _ := xdyEcsBillCase.CalBillStartEndTime(
-                    1633651200, // 2021-10-08
-                    1635897600, // 2021-11-03
-                    1630368000, // 2021-09-01
-                    1633046400, // 2021-10-01
-                )
-                Expect(isBill).To(BeFalse())
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：边界条件 - 账单周期在请求周期之前
+                // 输入参数: 
+                //   billStartTime = 1625097600 (2021-07-01)
+                //   billEndTime = 1627689600 (2021-07-31)
+                //   requestStartTime = 1630368000 (2021-09-01)
+                //   requestEndTime = 1633046400 (2021-10-01)
+                // 预期输出: isBill = false (不计费)
+                //
+                // 测试步骤说明...
             }})
         }})
     }})
 }})
 ```
 
-### 模板2: 使用 Mock 测试有依赖的方法
+### 模板2: 有依赖的方法测试框架（只包含结构和注释）
 
-以下是使用 gomock 测试有外部依赖方法的示例：
+对于有外部依赖的方法，也只生成框架和注释说明：
 
 ```go
 var _ = Describe("CostCase", func() {{
-    var (
-        costCase       *CostCase
-        mockRepo       *mocks.MockRepository
-        mockLogger     *mocks.MockLogger
-        ctrl           *gomock.Controller
-        ctx            context.Context
-    )
+    // 这里声明需要的变量（通常只声明，不初始化）
+    // var costCase *CostCase
+    // var mockRepo *mocks.MockRepository  // 如果需要mock
+    // var ctx context.Context
 
     BeforeEach(func() {{
-        // 初始化 mock controller
-        ctrl = gomock.NewController(GinkgoT())
-        mockRepo = mocks.NewMockRepository(ctrl)
-        mockLogger = mocks.NewMockLogger(ctrl)
-        ctx = context.Background()
-        
-        // 创建被测试对象，注入 mock 依赖
-        costCase = NewCostCase(mockRepo, mockLogger)
+        // TODO: 初始化测试对象和mock对象
+        // 例如:
+        // ctrl := gomock.NewController(GinkgoT())
+        // mockRepo = mocks.NewMockRepository(ctrl)
+        // costCase = NewCostCase(mockRepo, ...)
     }})
 
     AfterEach(func() {{
-        // 验证所有 mock 期望都被满足
-        ctrl.Finish()
+        // TODO: 清理工作
+        // 例如: ctrl.Finish()
     }})
 
     Describe("GetCustomerBill", func() {{
-        // Normal Case - 正常场景：数据库返回成功
         Context("when database returns data successfully", func() {{
             It("should return customer bill list", func() {{
-                // Arrange - 准备测试数据和 mock 期望
-                customerID := "cust001"
-                expectedBills := []Bill{{
-                    {{CustomerID: "cust001", Amount: 100.5}},
-                    {{CustomerID: "cust002", Amount: 200.0}},
-                }}
-                
-                // 设置 mock 期望
-                mockRepo.EXPECT().
-                    FindBills(ctx, customerID).
-                    Return(expectedBills, nil)
-
-                // Act - 执行被测试的方法
-                result, err := costCase.GetCustomerBill(ctx, customerID)
-
-                // Assert - 验证结果
-                Expect(err).NotTo(HaveOccurred())
-                Expect(result).To(Equal(expectedBills))
-                Expect(len(result)).To(Equal(2))
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：正常场景 - 数据库成功返回数据
+                // 输入参数: customerID = "cust001"
+                // 预期输出: 返回账单列表，无错误
+                //
+                // Mock设置说明:
+                // - mockRepo.EXPECT().FindBills(ctx, "cust001").Return(expectedBills, nil)
+                //
+                // 测试步骤:
+                // 1. Arrange: 准备customerID和expectedBills，设置mock期望
+                // 2. Act: result, err := costCase.GetCustomerBill(ctx, customerID)
+                // 3. Assert: Expect(err).NotTo(HaveOccurred()), Expect(result).To(Equal(expectedBills))
             }})
         }})
 
-        // Exception Case - 异常场景：数据库错误
         Context("when database returns error", func() {{
             It("should handle database connection error gracefully", func() {{
-                // Arrange
-                customerID := "cust001"
-                
-                // 设置 mock 返回错误
-                mockRepo.EXPECT().
-                    FindBills(ctx, customerID).
-                    Return(nil, errors.New("database connection failed"))
-
-                // Act
-                result, err := costCase.GetCustomerBill(ctx, customerID)
-
-                // Assert
-                Expect(err).To(HaveOccurred())
-                Expect(result).To(BeNil())
-                Expect(err.Error()).To(ContainSubstring("database connection failed"))
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：异常场景 - 数据库连接失败
+                // 输入参数: customerID = "cust001"
+                // 预期输出: 返回错误，结果为nil
+                //
+                // Mock设置说明:
+                // - mockRepo.EXPECT().FindBills(ctx, "cust001").Return(nil, errors.New("database connection failed"))
+                //
+                // 测试步骤:
+                // 1. Arrange: 准备customerID，设置mock返回错误
+                // 2. Act: result, err := costCase.GetCustomerBill(ctx, customerID)
+                // 3. Assert: Expect(err).To(HaveOccurred()), Expect(result).To(BeNil())
             }})
         }})
 
-        // Boundary Case - 边界场景：返回空列表
         Context("when customer has no bills", func() {{
             It("should return empty list", func() {{
-                // Arrange
-                customerID := "cust999"
-                
-                // 设置 mock 返回空列表
-                mockRepo.EXPECT().
-                    FindBills(ctx, customerID).
-                    Return([]Bill{{}}, nil)
-
-                // Act
-                result, err := costCase.GetCustomerBill(ctx, customerID)
-
-                // Assert
-                Expect(err).NotTo(HaveOccurred())
-                Expect(result).To(BeEmpty())
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景：边界条件 - 客户没有账单
+                // 输入参数: customerID = "cust999"
+                // 预期输出: 返回空列表，无错误
+                //
+                // Mock设置说明:
+                // - mockRepo.EXPECT().FindBills(ctx, "cust999").Return([]Bill{{}}, nil)
+                //
+                // 测试步骤说明...
             }})
         }})
     }})
@@ -618,8 +645,15 @@ AfterEach(func() {{
 - `Expect(str).To(ContainSubstring("text"))` - 字符串包含
 - `Expect(value).To(BeTrue())` / `BeFalse()` - 布尔判断
 
-请参考上面的优秀模板，生成结构清晰、覆盖全面的测试代码。
-只返回测试逻辑代码（Describe/Context/It部分），不要包含package声明、import语句和测试套件注册代码（TestXxx函数）。
+## 输出要求（非常重要）
+1. **只生成测试框架代码**，不要生成具体的测试实现
+2. 每个 It 块内只包含 `// TODO: 实现测试逻辑` 和详细的注释说明
+3. 注释中要详细说明测试场景、输入参数、预期输出和测试步骤
+4. 确保生成的代码能够通过 `go test -v` 编译（没有语法错误）
+5. BeforeEach 和 AfterEach 中也只包含注释说明，不包含具体代码
+6. 只返回测试逻辑代码（Describe/Context/It部分），不要包含package声明、import语句和测试套件注册代码（TestXxx函数）
+
+请参考上面的测试框架模板，生成结构清晰、覆盖全面的测试框架代码。
 """
     
     @staticmethod
@@ -651,7 +685,9 @@ AfterEach(func() {{
 ```
 """
         
-        return f"""请为以下Go源文件的函数生成Ginkgo BDD测试逻辑。
+        return f"""请为以下Go源文件的函数生成Ginkgo BDD测试框架代码。
+
+**重要说明：只生成测试框架代码，不要生成具体的测试实现逻辑。**
 
 ## 项目信息
 - Go模块路径: {module_path}
@@ -662,9 +698,15 @@ AfterEach(func() {{
 {functions_list_str}
 {source_section}
 
-## 重要规则（必须严格遵守）
+## 核心要求（必须严格遵守）
 
-### 1. 包声明与导入
+### 1. 只生成测试框架结构
+- **每个 It 块内只包含注释说明**，不包含具体的测试代码
+- 使用 `// TODO: 实现测试逻辑` 作为占位符
+- 在注释中详细说明测试场景、输入参数、预期输出和测试步骤
+- 确保生成的代码能够通过 `go test -v` 编译
+
+### 2. 包声明与导入
 **必须使用同包测试**:
 ```go
 package {package_name}  // ✅ 正确
@@ -680,33 +722,25 @@ import (
 )
 ```
 
-**导入规则（根据测试类型）**:
-- 纯函数测试：只导入 testing, ginkgo, gomega
-- 有依赖的方法：可以导入 gomock 和 mocks 包
-
-### 2. 测试结构
+### 3. 测试框架结构
 - 为每个函数生成一个 Describe 块
-- 使用 Context 组织不同的测试场景
-- 使用 It 编写具体的测试用例
-- 根据上面的建议测试用例数量生成测试
+- 使用 Context 组织不同的测试场景（Normal/Boundary/Exception）
+- 使用 It 编写测试用例占位符
+- 根据建议的测试用例数量生成对应数量的 It 块
 
-### 3. 测试策略
-**根据函数类型选择策略**:
-1. **纯函数**（无外部依赖）：直接测试，通过不同参数组合验证行为
-2. **有依赖的方法**（数据库、外部服务）：使用 gomock 模拟依赖
+### 4. 注释说明要求
+每个 It 块内的注释必须包含：
+- **测试场景说明**: 这个测试要测什么
+- **输入参数**: 具体的输入值和含义
+- **预期输出**: 期望的返回值或行为
+- **测试步骤**: Arrange-Act-Assert 三个步骤的详细说明
+- 如果需要mock，说明mock的设置方法
 
-**场景覆盖**:
-- Normal Case: 正常业务流程
-- Boundary Case: 边界值和临界条件（零值、空值、最大/最小值）
-- Exception Case: 错误处理和异常情况（负数、无效输入、数据库错误）
-
-### 4. 测试质量要求
-- 每个测试用例应该独立
-- 使用有意义的描述（Describe/Context/It）
-- 覆盖正常、边界、异常三种场景
-- 使用 Gomega 的流畅断言
-- 添加注释说明测试数据的含义
-- 使用真实且有意义的数据（时间戳用真实日期，IP用真实IP）
+### 5. 场景覆盖
+为每个函数至少生成以下三种场景的测试框架：
+- **Normal Case**: 正常业务流程测试（至少1个It块）
+- **Boundary Case**: 边界值和临界条件测试（零值、空值、最大/最小值）
+- **Exception Case**: 错误处理和异常情况测试（负数、无效输入、错误）
 
 ## 优秀的测试模板参考
 
@@ -881,11 +915,15 @@ var _ = Describe("XdyEcsBillCase", func() {{
    - 重点是场景覆盖：正常、边界、异常
    - 使用真实且有意义的数据
 
-## 输出格式
-请只返回测试逻辑代码，包含所有函数的 Describe 块。
-不要包含 package 声明、import 语句和套件注册函数。
+## 输出格式（非常重要）
+1. **只返回测试框架代码**，不要返回具体的测试实现
+2. 每个 It 块内只包含 `// TODO: 实现测试逻辑` 和详细注释
+3. BeforeEach 和 AfterEach 也只包含注释说明
+4. 包含所有函数的 Describe 块
+5. 不要包含 package 声明、import 语句和套件注册函数
+6. 确保生成的代码能够通过 `go test -v` 编译
 
-请参考上面的优秀模板，为所有函数生成结构清晰、覆盖全面的测试逻辑。
+请参考上面的测试框架模板，为所有函数生成结构清晰、覆盖全面的测试框架代码（只包含注释说明，不包含具体实现）。
 """
     
     @staticmethod

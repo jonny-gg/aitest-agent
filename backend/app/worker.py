@@ -27,9 +27,10 @@ celery_app.conf.update(
     timezone='UTC',
     enable_utc=True,
     task_track_started=True,
-    task_time_limit=7200,  # 2小时超时（适合大项目）
+    task_time_limit=settings.celery_task_time_limit,  # 从环境变量读取超时时间
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=50,
+    worker_concurrency=settings.celery_worker_concurrency,  # 从环境变量读取并发数
 )
 
 

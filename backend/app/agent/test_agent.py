@@ -428,18 +428,34 @@ Task ID: {task_id}
         return str(test_file_path)
     
     def _fix_package_name(self, test_code: str, test_dir: Path) -> str:
-        """修复测试文件的包名"""
+        """
+        修复测试文件的包名
+        
+        使用同包测试策略：测试代码和源代码使用相同的 package
+        不使用 _test 后缀
+        """
         import re
         
-        # 获取目录名作为包名
+        # 获取目录名作为包名（不添加 _test 后缀）
         dir_name = test_dir.name
-        correct_package = f"{dir_name}_test"
+        correct_package = dir_name  # ✅ 使用同包测试，不添加 _test
         
-        # 查找并替换包名
+        # 查找并替换包名（移除 _test 后缀）
         package_match = re.search(r'^package\s+(\w+)', test_code, re.MULTILINE)
         if package_match:
             current_package = package_match.group(1)
-            if current_package != correct_package:
+            # 如果当前包名有 _test 后缀，移除它
+            if current_package.endswith('_test'):
+                test_code = re.sub(
+                    r'^package\s+\w+_test',
+                    f'package {correct_package}',
+                    test_code,
+                    count=1,
+                    flags=re.MULTILINE
+                )
+                logger.debug(f"📝 修复包名为同包测试: {current_package} -> {correct_package}")
+            elif current_package != correct_package:
+                # 如果包名不匹配（但没有_test后缀），也修正
                 test_code = re.sub(
                     r'^package\s+\w+',
                     f'package {correct_package}',

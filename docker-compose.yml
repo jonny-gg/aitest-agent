@@ -55,6 +55,9 @@ services:
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - BAISHAN_API_KEY=${BAISHAN_API_KEY}
+      - BAISHAN_MODEL=${BAISHAN_MODEL:-GLM-4.6}
+      - BAISHAN_BASE_URL=${BAISHAN_BASE_URL:-https://api.edgefn.net/v1}
       - AI_PROVIDER=${AI_PROVIDER:-openai}
       - GIT_USERNAME=${GIT_USERNAME:-}
       - GIT_TOKEN=${GIT_TOKEN:-}
@@ -92,6 +95,9 @@ services:
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - BAISHAN_API_KEY=${BAISHAN_API_KEY}
+      - BAISHAN_MODEL=${BAISHAN_MODEL:-GLM-4.6}
+      - BAISHAN_BASE_URL=${BAISHAN_BASE_URL:-https://api.edgefn.net/v1}
       - AI_PROVIDER=${AI_PROVIDER:-openai}
       - GIT_USERNAME=${GIT_USERNAME:-}
       - GIT_TOKEN=${GIT_TOKEN:-}

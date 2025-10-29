@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://localhost:6379/0"
     
     # AI配置
-    ai_provider: str = "openai"  # openai, anthropic, local
+    ai_provider: str = "openai"  # openai, anthropic, local, baishan
     openai_api_key: str = ""
     openai_model: str = "gpt-4"
     openai_base_url: str = "https://api.openai.com/v1"
@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     
     local_model_url: str = "http://localhost:8080/v1"
     local_model_name: str = "codellama"
+    
+    # 百山云 AI 配置
+    baishan_api_key: str = ""  # 完整的 key（包含 sk- 前缀），使用时会自动去除
+    baishan_model: str = "GLM-4.6"  # 推荐：GLM-4.6, Qwen3-235B-A22B-2507, DeepSeek-V3
+    baishan_base_url: str = "https://api.edgefn.net/v1"  # 百山云 API 地址
     
     # Git配置
     git_username: str = ""
@@ -58,12 +63,17 @@ class Settings(BaseSettings):
     # 测试修复配置
     max_test_fix_retries: int = 3  # AI自动修复测试的最大重试次数
     enable_auto_fix: bool = True  # 是否启用自动修复功能
-    max_concurrent_generations: int = 10  # 并发生成测试的最大数量
     skip_existing_tests: bool = True  # 是否跳过已存在的测试文件，直接运行和修复
     
     # 并发配置
-    max_concurrent_tasks: int = 5
-    celery_worker_concurrency: int = 4
+    max_concurrent_generations: int = 20  # 并发生成测试的最大数量（5-20推荐）
+    max_concurrent_tasks: int = 10  # 系统同时处理的任务数（3-10推荐）
+    celery_worker_concurrency: int = 8  # Worker并发数，建议设为CPU核心数（2-8推荐）
+    
+    # 超时配置（单位：秒）
+    celery_task_time_limit: int = 7200  # Celery任务总超时（2小时）
+    test_execution_timeout: int = 300  # 测试执行超时（5分钟）
+    ginkgo_install_timeout: int = 300  # Ginkgo安装超时（5分钟）
     
     @property
     def database_url(self) -> str:

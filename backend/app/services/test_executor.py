@@ -5,6 +5,9 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 from loguru import logger
+from app.config import get_settings
+
+settings = get_settings()
 
 
 class TestExecutor:
@@ -36,7 +39,7 @@ class TestExecutor:
                     cwd=cwd or self.workspace_path,
                     capture_output=True,
                     text=True,
-                    timeout=300  # 5分钟超时
+                    timeout=settings.test_execution_timeout  # 从环境变量读取
                 )
             else:
                 result = subprocess.run(
@@ -44,7 +47,7 @@ class TestExecutor:
                     cwd=cwd or self.workspace_path,
                     capture_output=True,
                     text=True,
-                    timeout=300  # 5分钟超时
+                    timeout=settings.test_execution_timeout  # 从环境变量读取
                 )
             return result
         except subprocess.TimeoutExpired:
@@ -158,7 +161,7 @@ class GolangTestExecutor(TestExecutor):
                     ["bash", "-c", install_cmd],
                     capture_output=True,
                     text=True,
-                    timeout=300  # 安装可能需要较长时间
+                    timeout=settings.ginkgo_install_timeout  # 从环境变量读取
                 )
                 
                 if result.returncode == 0:

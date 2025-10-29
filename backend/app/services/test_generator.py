@@ -26,6 +26,40 @@ class TestGenerator:
         elif ai_provider == "anthropic":
             self.client = anthropic.Anthropic(api_key=self.settings.anthropic_api_key)
             self.model = self.settings.anthropic_model
+        elif ai_provider == "baishan":
+            # 百山云 AI - 兼容 OpenAI API 格式
+            # 处理 API key：去掉 sk- 前缀
+            api_key = self.settings.baishan_api_key
+            if api_key.startswith("sk-"):
+                api_key = api_key[3:]  # 去掉 sk- 前缀
+            
+            self.client = openai.OpenAI(
+                api_key=api_key,
+                base_url=self.settings.baishan_base_url
+            )
+            self.model = self.settings.baishan_model
+            logger.info(f"✅ 使用百山云 AI - 模型: {self.model}, Base URL: {self.settings.baishan_base_url}")
+    
+    def _extract_message_content(self, message) -> str:
+        """
+        提取 AI 响应消息内容
+        
+        处理不同 AI 提供商的响应格式：
+        - OpenAI: message.content
+        - 百山云 GLM-4.6: message.reasoning_content (推理模式) 或 message.content
+        - Anthropic: message.content (通过不同的API)
+        
+        Args:
+            message: AI 响应消息对象
+            
+        Returns:
+            提取的文本内容
+        """
+        # 优先使用 content，如果为 None 则尝试 reasoning_content（百山云推理模式）
+        content = message.content
+        if content is None:
+            content = getattr(message, 'reasoning_content', None)
+        return content or ""
     
     def _detect_module_path(self) -> str:
         """从 go.mod 检测 Go 模块路径"""
@@ -486,7 +520,7 @@ class TestGenerator:
         if test_framework == "ginkgo":
             ginkgo_suite_requirements = """
 7. **Ginkgo 套件完整性检查**：
-   - 必须包含 `package xxx_test` 声明
+   - 必须包含 `package xxx` 声明（同包测试，不使用 _test 后缀）
    - 必须包含完整的 import 块（testing, ginkgo/v2, gomega）
    - 必须包含 `func TestXxx(t *testing.T)` 套件注册函数
    - 如果原代码缺少以上任何部分，请补充完整的 Ginkgo 套件模板
@@ -544,7 +578,7 @@ class TestGenerator:
             
             logger.debug(f"代码行数: {code_lines}, 使用 max_tokens: {max_tokens}")
             
-            if self.ai_provider == "openai":
+            if self.ai_provider in ["openai", "baishan"]:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
@@ -560,7 +594,7 @@ class TestGenerator:
                     temperature=0.2,  # 降低温度，更精确
                     max_tokens=max_tokens
                 )
-                fixed_code = response.choices[0].message.content
+                fixed_code = self._extract_message_content(response.choices[0].message)
             
             elif self.ai_provider == "anthropic":
                 response = self.client.messages.create(
@@ -600,7 +634,7 @@ class GolangTestGenerator(TestGenerator):
         确保 Ginkgo 测试代码包含完整的套件模板
         
         检查并补充：
-        1. package xxx_test 声明
+        1. package xxx 声明（同包测试，不使用 _test 后缀）
         2. import 块
         3. func TestXxx(t *testing.T) 套件注册函数
         
@@ -686,7 +720,7 @@ class GolangTestGenerator(TestGenerator):
             import_block = f'{imports_str}\n\t"testing"'
         
         # 生成完整的套件模板
-        complete_code = f"""package {package_name}_test
+        complete_code = f"""package {package_name}
 
 import (
 \t{import_block}
@@ -703,7 +737,7 @@ func Test{package_name.capitalize()}(t *testing.T) {{
 {test_logic}
 """
         
-        logger.info(f"✅ 已补充完整的 Ginkgo 套件模板 (package: {package_name}_test, imports: {len(common_imports) + 3} 个)")
+        logger.info(f"✅ 已补充完整的 Ginkgo 套件模板 (package: {package_name}, imports: {len(common_imports) + 3} 个)")
         return complete_code
     
     def generate_tests_for_file(
@@ -853,7 +887,7 @@ func Test{package_name.capitalize()}(t *testing.T) {{
         logger.info(f"✅ 分批生成完成: {len(test_functions)}/{len(functions)} 成功")
         
         # 合并所有测试函数
-        test_code = f"""package {package_name}_test
+        test_code = f"""package {package_name}
 
 import (
     "testing"
@@ -1067,7 +1101,7 @@ import (
         prompt = self._build_file_test_prompt(file_analysis, test_framework)
         
         try:
-            if self.ai_provider == "openai":
+            if self.ai_provider in ["openai", "baishan"]:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
@@ -1083,7 +1117,7 @@ import (
                     temperature=0.3,
                     max_tokens=65536  # DeepSeek API 最大支持 65536 tokens
                 )
-                test_code = response.choices[0].message.content
+                test_code = self._extract_message_content(response.choices[0].message)
             
             elif self.ai_provider == "anthropic":
                 response = self.client.messages.create(
@@ -1132,7 +1166,7 @@ import (
         prompt = self._build_prompt(function_info, test_framework)
         
         try:
-            if self.ai_provider == "openai":
+            if self.ai_provider in ["openai", "baishan"]:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
@@ -1148,7 +1182,7 @@ import (
                     temperature=0.3,
                     max_tokens=2000
                 )
-                test_code = response.choices[0].message.content
+                test_code = self._extract_message_content(response.choices[0].message)
             
             elif self.ai_provider == "anthropic":
                 response = self.client.messages.create(
@@ -1294,7 +1328,7 @@ import (
 
 ## 示例格式
 ```go
-package xxx_test
+package xxx
 
 import (
     "testing"
@@ -1324,7 +1358,7 @@ func TestFunction2(t *testing.T) {{
 // 更多测试函数...
 ```
 
-请只返回完整的测试代码，不要包含额外的解释。确保包名正确（通常是原包名_test）。
+请只返回完整的测试代码，不要包含额外的解释。确保使用同包测试（package {包名}，不使用 _test 后缀）。
 """
         return prompt
     
@@ -1409,7 +1443,9 @@ func TestFunction2(t *testing.T) {{
         # 例如: xdy_ecs_bill.go -> TestXdyEcsBill
         test_func_name = "Test" + "".join([word.capitalize() for word in source_file_name.replace('.go', '').split('_')])
         
-        prompt = f"""请为以下Go源文件生成基于Ginkgo/Gomega的BDD风格单元测试。所有函数的测试都应该在一个测试文件中。
+        prompt = f"""请为以下Go源文件生成基于Ginkgo/Gomega的BDD风格单元测试框架。所有函数的测试框架都应该在一个测试文件中。
+
+**重要说明：只生成测试框架代码，不要生成具体的测试实现逻辑。每个It块内只包含注释说明。**
 
 ## 项目信息
 - Go模块路径: {self.module_path}
@@ -1417,25 +1453,26 @@ func TestFunction2(t *testing.T) {{
 - 源文件: {source_file_name}
 - 建议总测试用例数: {total_test_cases}
 
-## 源文件中的函数实现及测试用例要求
-以下是每个函数的完整源代码实现，请根据实际的函数逻辑生成准确的测试用例：
+## 源文件中的函数信息及测试用例要求
+以下是每个函数的信息，请为每个函数生成对应的测试框架：
 
 {functions_list_str}
 
-## 重要规则（必须遵守）
+## 核心要求（必须严格遵守）
 
-### 1. 包声明
+### 1. 只生成测试框架结构
+- **每个 It 块内只包含注释说明**，不包含具体的测试代码
+- 使用 `// TODO: 实现测试逻辑` 作为占位符
+- 在注释中详细说明测试场景、输入参数、预期输出和测试步骤
+- 确保生成的代码能够通过 `go test -v` 编译
+
+### 2. 包声明
 **必须使用同包测试（in-package testing）**:
 ```go
 package {package_name}  // ✅ 正确：使用同包名
 ```
 
-**不要使用外部测试包**:
-```go
-package {package_name}_test  // ❌ 错误：不要使用 _test 后缀
-```
-
-### 2. 导入规则
+### 3. 导入规则
 **只导入这些包**:
 ```go
 import (
@@ -1447,31 +1484,21 @@ import (
 ```
 
 **不要导入**:
-- ❌ 不要导入项目内部的其他包（如 internal/repo, api/v1 等）
-- ❌ 不要导入 mock 包（如 internal/mocks, mock_v1 等）
+- ❌ 不要导入项目内部的其他包
+- ❌ 不要导入 mock 包
 - ❌ 不要导入被测试的包本身
 
-### 3. 类型和函数引用
-因为使用同包测试，可以直接使用包内的所有类型和函数，不需要包名前缀。
+### 4. 测试框架结构要求
+1. 使用Ginkgo BDD的Describe/Context/It结构
+2. 为每个函数创建一个Describe块
+3. BeforeEach 和 AfterEach 中只包含注释说明
+4. 严格按照每个函数建议的测试用例数量生成对应数量的 It 块：
+   - 正常场景：生成指定数量的It块
+   - 边界条件：生成指定数量的It块
+   - 异常场景：生成指定数量的It块
+5. 每个It块内只包含TODO注释和详细的测试说明
 
-## 测试要求
-1. 使用Ginkgo BDD测试框架和Gomega断言库
-2. 使用Describe/Context/It结构组织测试
-3. 为每个函数创建一个Describe块
-4. 所有函数的测试在同一个测试文件中
-5. 使用BeforeEach进行测试前置设置
-6. 使用AfterEach进行清理
-7. **重要**: 严格按照上述每个函数的建议测试用例数量生成测试：
-   - 正常业务场景：生成指定数量的正常场景测试用例
-   - 边界条件：生成指定数量的边界测试用例
-   - 异常场景：生成指定数量的异常测试用例
-   - 代码行数越多、复杂度越高的函数，测试用例应该越详细
-8. 使用Gomega的流畅断言语法
-9. 测试描述要清晰，符合BDD风格
-10. **重要**: 测试套件注册函数名必须为 `{test_func_name}`，避免同一包下多个测试文件的函数名冲突
-11. 如需 mock，在测试中定义简单的 stub 结构
-
-## Ginkgo测试模板（标准格式）
+## 测试框架模板（只包含结构和注释）
 ```go
 package {package_name}  // 同包测试
 
@@ -1489,42 +1516,56 @@ func {test_func_name}(t *testing.T) {{
 }}
 
 var _ = Describe("{source_file_name.replace('.go', '')}", func() {{
-    // 可选：共享的测试变量（可以直接使用包内类型）
-    var (
-        // 共享变量
-    )
+    // 可选：共享的测试变量声明
+    // var someVar *SomeType
     
     BeforeEach(func() {{
-        // 整体的测试前置设置
+        // TODO: 初始化测试对象
+        // 例如: someVar = NewSomeType(...)
     }})
     
     AfterEach(func() {{
-        // 整体的清理工作
+        // TODO: 清理工作
     }})
     
     // 为每个函数创建一个Describe块
     Describe("Function1", func() {{
         Context("when 正常场景", func() {{
             It("should 返回预期结果", func() {{
-                // Arrange: 准备测试数据
-                
-                // Act: 执行被测函数
-                
-                // Assert: 验证结果
-                Expect(result).To(Equal(expected))
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景说明：
+                // - 输入参数: param1 = value1, param2 = value2
+                // - 预期输出: 返回值应该是XXX
+                //
+                // 测试步骤:
+                // 1. Arrange: 准备测试数据 (例如: input := "test")
+                // 2. Act: 调用被测方法 (例如: result := Function1(input))
+                // 3. Assert: 验证结果 (例如: Expect(result).To(Equal(expected)))
             }})
         }})
         
         Context("when 边界条件", func() {{
             It("should 正确处理边界值", func() {{
-                // 边界测试
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景说明：
+                // - 输入参数: 零值/空值/最大值等边界情况
+                // - 预期输出: 应该如何处理边界值
+                //
+                // 测试步骤说明...
             }})
         }})
         
         Context("when 异常场景", func() {{
             It("should 返回适当错误", func() {{
-                // 异常测试
-                Expect(err).To(HaveOccurred())
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景说明：
+                // - 输入参数: 无效输入/错误条件
+                // - 预期输出: 应该返回错误
+                //
+                // 测试步骤说明...
             }})
         }})
     }})
@@ -1532,34 +1573,28 @@ var _ = Describe("{source_file_name.replace('.go', '')}", func() {{
     Describe("Function2", func() {{
         Context("when 正常场景", func() {{
             It("should 返回预期结果", func() {{
-                // 测试逻辑
+                // TODO: 实现测试逻辑
+                //
+                // 测试场景说明...
             }})
         }})
     }})
     
-    // 更多函数的测试...
+    // 为其他函数生成类似的测试框架...
 }})
 ```
 
-## Gomega常用断言
-- Expect(actual).To(Equal(expected))  // 相等断言
-- Expect(err).NotTo(HaveOccurred())  // 无错误
-- Expect(err).To(HaveOccurred())  // 有错误
-- Expect(value).To(BeNil())  // 空值
-- Expect(slice).To(ContainElement(item))  // 包含元素
-- Expect(value).To(BeNumerically(">", 0))  // 数值比较
-- Expect(str).To(BeEmpty())  // 空字符串
-- Expect(boolean).To(BeTrue())  // 布尔值
+## 输出要求（非常重要）
+1. **只返回测试框架代码**，不要返回具体的测试实现
+2. 每个 It 块内只包含 `// TODO: 实现测试逻辑` 和详细的注释说明
+3. BeforeEach 和 AfterEach 中也只包含注释说明
+4. 确保使用 `package {package_name}`（不带 _test）
+5. 只导入 testing、ginkgo 和 gomega
+6. 不要导入任何项目内部包
+7. 测试套件函数名必须为 `{test_func_name}`
+8. 确保生成的代码能够通过 `go test -v` 编译（没有语法错误）
 
-## 输出要求
-1. 只返回完整的测试代码
-2. 不要包含额外的解释或注释说明
-3. 确保使用 `package {package_name}`（不带 _test）
-4. 只导入 testing、ginkgo 和 gomega
-5. 不要导入任何项目内部包
-6. 测试套件函数名必须为 `{test_func_name}`
-
-请严格按照以上规则生成测试代码。
+请严格按照以上规则生成测试框架代码（只包含结构和注释，不包含具体实现）。
 """
         return prompt
     
@@ -1610,16 +1645,14 @@ var _ = Describe("{source_file_name.replace('.go', '')}", func() {{
             test_func_name = self._snake_to_camel(source_file_name)
             suite_name = f"{test_func_name} Suite"
         
-        # 生成标准Ginkgo套件模板
-        suite_template = f"""package {package_name}_test
+        # 生成标准Ginkgo套件模板 (同包测试，不导入项目内部包)
+        suite_template = f"""package {package_name}
 
 import (
 \t"testing"
 \t
 \t. "github.com/onsi/ginkgo/v2"
 \t. "github.com/onsi/gomega"
-\t
-\t"{import_path}"
 )
 
 func Test{test_func_name}(t *testing.T) {{
@@ -1627,7 +1660,7 @@ func Test{test_func_name}(t *testing.T) {{
 \tRunSpecs(t, "{suite_name}")
 }}"""
         
-        logger.debug(f"生成Ginkgo套件框架: package={package_name}_test, test_func=Test{test_func_name}, import={import_path}")
+        logger.debug(f"生成Ginkgo套件框架: package={package_name}, test_func=Test{test_func_name}")
         return suite_template
     
     def _snake_to_camel(self, snake_str: str) -> str:
@@ -1693,8 +1726,10 @@ func Test{test_func_name}(t *testing.T) {{
         source_file_name = Path(file_path).stem
         total_test_cases = file_strategy['total_test_cases']
         
-        # 简化的prompt，只要求生成测试逻辑
-        prompt = f"""请为以下Go源文件的函数生成Ginkgo BDD测试逻辑。
+        # 简化的prompt，只要求生成测试框架
+        prompt = f"""请为以下Go源文件的函数生成Ginkgo BDD测试框架代码。
+
+**重要说明：只生成测试框架结构，不要生成具体的测试实现。每个It块内只包含注释说明。**
 
 ## 源文件
 {Path(file_path).name}
@@ -1703,65 +1738,76 @@ func Test{test_func_name}(t *testing.T) {{
 ## 函数列表及测试用例要求
 {functions_list}
 
-## 要求
-1. **只返回 var _ = Describe(...) 测试逻辑代码**
+## 核心要求
+1. **只返回 var _ = Describe(...) 测试框架代码**
 2. **不要包含**: package声明、import语句、TestSuite注册函数
 3. 为每个函数创建一个 Describe 块
 4. 使用 Context/It 组织测试场景
-5. 使用 Gomega 断言：Expect(...).To(...)
-6. **严格按照上述每个函数的建议测试用例数量生成**：
-   - 正常场景：生成指定数量的正常用例
-   - 边界条件：生成指定数量的边界用例
-   - 异常场景：生成指定数量的异常用例
-7. 如需依赖注入，在BeforeEach中初始化Mock
+5. **每个 It 块内只包含注释说明**，不包含具体的测试代码
+6. 使用 `// TODO: 实现测试逻辑` 作为占位符
+7. **严格按照每个函数建议的测试用例数量生成对应数量的 It 块**：
+   - 正常场景：生成指定数量的It块
+   - 边界条件：生成指定数量的It块
+   - 异常场景：生成指定数量的It块
+8. 在每个It块的注释中详细说明：测试场景、输入参数、预期输出、测试步骤
 
-## 示例格式
+## 测试框架模板
 ```go
 var _ = Describe("{source_file_name}", func() {{
-\tvar (
-\t\t// 共享测试变量
-\t)
+\t// 可选：共享测试变量声明
+\t// var someVar *SomeType
 \t
 \tBeforeEach(func() {{
-\t\t// 测试前置设置
+\t\t// TODO: 初始化测试对象
+\t\t// 例如: someVar = NewSomeType(...)
 \t}})
 \t
 \tAfterEach(func() {{
-\t\t// 清理
+\t\t// TODO: 清理工作
 \t}})
 \t
 \tDescribe("Function1", func() {{
 \t\tContext("when normal input", func() {{
 \t\t\tIt("should return expected result", func() {{
-\t\t\t\t// 测试代码
-\t\t\t\tExpect(result).To(Equal(expected))
+\t\t\t\t// TODO: 实现测试逻辑
+\t\t\t\t//
+\t\t\t\t// 测试场景说明：
+\t\t\t\t// - 输入参数: param = value
+\t\t\t\t// - 预期输出: 返回XXX
+\t\t\t\t//
+\t\t\t\t// 测试步骤:
+\t\t\t\t// 1. Arrange: 准备测试数据
+\t\t\t\t// 2. Act: 调用被测方法
+\t\t\t\t// 3. Assert: 验证结果
 \t\t\t}})
 \t\t}})
 \t\t
 \t\tContext("when edge case", func() {{
 \t\t\tIt("should handle correctly", func() {{
-\t\t\t\t// 测试代码
+\t\t\t\t// TODO: 实现测试逻辑
+\t\t\t\t//
+\t\t\t\t// 测试场景说明...
 \t\t\t}})
 \t\t}})
 \t}})
 \t
 \tDescribe("Function2", func() {{
-\t\t// 第二个函数的测试...
+\t\t// 为第二个函数生成类似的测试框架...
 \t}})
 }})
 ```
 
-只返回测试逻辑代码，不要任何解释或额外内容。
+只返回测试框架代码（只包含结构和注释，不包含具体实现），不要任何解释或额外内容。
 """
         
         try:
-            if self.ai_provider == "openai":
+            if self.ai_provider in ["openai", "baishan"]:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
                         {
                             "role": "system",
-                            "content": "你是Ginkgo BDD测试专家，擅长编写清晰的测试逻辑。只返回代码，不要解释。"
+                            "content": "你是Ginkgo BDD测试专家。只生成测试框架代码，不要生成具体的测试实现。每个It块内只包含TODO注释和详细的测试说明。只返回代码，不要解释。"
                         },
                         {
                             "role": "user",
@@ -1769,9 +1815,9 @@ var _ = Describe("{source_file_name}", func() {{
                         }
                     ],
                     temperature=0.3,
-                    max_tokens=3000  # 比完整生成少1000 tokens
+                    max_tokens=3000  # 测试框架比完整实现更简短
                 )
-                test_logic = response.choices[0].message.content
+                test_logic = self._extract_message_content(response.choices[0].message)
             
             elif self.ai_provider == "anthropic":
                 response = self.client.messages.create(
@@ -1825,7 +1871,7 @@ var _ = Describe("{source_file_name}", func() {{
         )
         
         try:
-            if self.ai_provider == "openai":
+            if self.ai_provider in ["openai", "baishan"]:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
@@ -1841,7 +1887,7 @@ var _ = Describe("{source_file_name}", func() {{
                     temperature=0.3,
                     max_tokens=2500
                 )
-                fixed_test = response.choices[0].message.content
+                fixed_test = self._extract_message_content(response.choices[0].message)
             
             elif self.ai_provider == "anthropic":
                 response = self.client.messages.create(
@@ -2058,7 +2104,7 @@ class CppTestGenerator(TestGenerator):
         prompt = self._build_prompt(function_info, test_framework)
         
         try:
-            if self.ai_provider == "openai":
+            if self.ai_provider in ["openai", "baishan"]:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
@@ -2074,7 +2120,7 @@ class CppTestGenerator(TestGenerator):
                     temperature=0.3,
                     max_tokens=2000
                 )
-                test_code = response.choices[0].message.content
+                test_code = self._extract_message_content(response.choices[0].message)
             
             elif self.ai_provider == "anthropic":
                 response = self.client.messages.create(
@@ -2134,7 +2180,7 @@ class CppTestGenerator(TestGenerator):
 """
         
         try:
-            if self.ai_provider == "openai":
+            if self.ai_provider in ["openai", "baishan"]:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
@@ -2150,7 +2196,7 @@ class CppTestGenerator(TestGenerator):
                     temperature=0.3,
                     max_tokens=2500
                 )
-                fixed_test = response.choices[0].message.content
+                fixed_test = self._extract_message_content(response.choices[0].message)
             
             elif self.ai_provider == "anthropic":
                 response = self.client.messages.create(
@@ -2321,7 +2367,7 @@ class CTestGenerator(TestGenerator):
         prompt = self._build_prompt(function_info, test_framework)
         
         try:
-            if self.ai_provider == "openai":
+            if self.ai_provider in ["openai", "baishan"]:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
@@ -2337,7 +2383,7 @@ class CTestGenerator(TestGenerator):
                     temperature=0.3,
                     max_tokens=2000
                 )
-                test_code = response.choices[0].message.content
+                test_code = self._extract_message_content(response.choices[0].message)
             
             elif self.ai_provider == "anthropic":
                 response = self.client.messages.create(
@@ -2397,7 +2443,7 @@ class CTestGenerator(TestGenerator):
 """
         
         try:
-            if self.ai_provider == "openai":
+            if self.ai_provider in ["openai", "baishan"]:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
@@ -2413,7 +2459,7 @@ class CTestGenerator(TestGenerator):
                     temperature=0.3,
                     max_tokens=2500
                 )
-                fixed_test = response.choices[0].message.content
+                fixed_test = self._extract_message_content(response.choices[0].message)
             
             elif self.ai_provider == "anthropic":
                 response = self.client.messages.create(

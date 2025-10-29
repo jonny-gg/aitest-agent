@@ -372,7 +372,7 @@ def show_ginkgo_example():
     print("""
 // Kratos Service 测试示例
 // 注意：实际生成的测试会根据你的项目自动使用正确的模块路径和包名
-package service_test
+package service
 
 import (
     "context"
