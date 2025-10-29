@@ -95,8 +95,8 @@ services:
       - AI_PROVIDER=${AI_PROVIDER:-openai}
       - GIT_USERNAME=${GIT_USERNAME:-}
       - GIT_TOKEN=${GIT_TOKEN:-}
-      - GOPRIVATE=bt.baishancloud.com/*
-      - GONOSUMDB=bt.baishancloud.com/*
+      - GOPRIVATE=bt.xxxcloud.com/*
+      - GONOSUMDB=bt.xxxcloud.com/*
       # - GOPROXY=https://goproxy.cn,direct
     volumes:
       - ./backend:/app

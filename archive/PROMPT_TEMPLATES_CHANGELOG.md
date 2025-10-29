@@ -59,7 +59,7 @@ prompt = self.prompt_templates.golang_ginkgo_test(
 import "your-module-path/internal/biz"
 
 // 现在（自动正确）
-import "bt.baishancloud.com/baishanone/cloud-ecs-api/internal/biz"
+import "bt.xxxcloud.com/xxxone/cloud-ecs-api/internal/biz"
 ```
 
 #### 3. 包名自动匹配

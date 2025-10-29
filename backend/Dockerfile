@@ -28,13 +28,13 @@ RUN curl -OL https://go.dev/dl/go1.23.7.linux-amd64.tar.gz && \
 # 设置Go环境变量
 ENV GOPATH="/root/go"
 ENV GO111MODULE=on
-ENV GOPRIVATE=bt.baishancloud.com/*
-ENV GONOSUMDB=bt.baishancloud.com/*
+ENV GOPRIVATE=bt.xxxcloud.com/*
+ENV GONOSUMDB=bt.xxxcloud.com/*
 ENV GOPROXY=https://goproxy.cn,direct
 ENV PATH="/usr/local/go/bin:${GOPATH}/bin:${PATH}"
 
 # 配置 Git 使用 SSH 访问私有仓库
-RUN git config --global url."ssh://git@bt.baishancloud.com:7999/".insteadOf "https://bt.baishancloud.com/" && \
+RUN git config --global url."ssh://git@bt.xxxcloud.com:7999/".insteadOf "https://bt.xxxcloud.com/" && \
     mkdir -p /root/.ssh && \
     chmod 700 /root/.ssh
 

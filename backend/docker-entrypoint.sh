@@ -25,7 +25,7 @@ if [ -f /root/.ssh/known_hosts ]; then
 fi
 
 # 配置 Git 使用 SSH（运行时再次确认）
-git config --global url."ssh://git@bt.baishancloud.com:7999/".insteadOf "https://bt.baishancloud.com/"
+git config --global url."ssh://git@bt.xxxcloud.com:7999/".insteadOf "https://bt.xxxcloud.com/"
 
 # 配置 SSH 使用临时目录
 export GIT_SSH_COMMAND="ssh -i $SSH_DIR/id_rsa -F $SSH_DIR/config -o UserKnownHostsFile=$SSH_DIR/known_hosts -o StrictHostKeyChecking=no"

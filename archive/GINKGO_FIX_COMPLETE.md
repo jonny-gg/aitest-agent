@@ -55,7 +55,7 @@ def _execute_ginkgo_tests(self, test_files: List[str]) -> Dict:
 package biz_test  // ❌ 外部测试包
 
 import (
-    "bt.baishancloud.com/baishanone/cloud-ecs-api/internal/biz"  // ❌ 导入不存在的包
+    "bt.xxxcloud.com/xxxone/cloud-ecs-api/internal/biz"  // ❌ 导入不存在的包
 )
 
 var _ = Describe("Config", func() {
@@ -115,9 +115,9 @@ package {package_name}  // ✅ 使用同包名，不加 _test
 ### 修复前
 ```bash
 Failed to compile biz:
-# bt.baishancloud.com/baishanone/cloud-ecs-api/internal/biz
+# bt.xxxcloud.com/xxxone/cloud-ecs-api/internal/biz
 noction_test.go:14:2: cannot find module providing package
-FAIL    bt.baishancloud.com/baishanone/cloud-ecs-api/internal/biz [setup failed]
+FAIL    bt.xxxcloud.com/xxxone/cloud-ecs-api/internal/biz [setup failed]
 
 Ginkgo ran 1 suite in 2.47s
 Ran 0 of 0 Specs  # ❌ 0/0 测试
@@ -155,7 +155,7 @@ curl -X POST http://localhost:8000/api/projects \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Test Project",
-    "git_url": "ssh://git@bt.baishancloud.com:7999/baishanone/cloud-ecs-api.git",
+    "git_url": "ssh://git@bt.xxxcloud.com:7999/xxxone/cloud-ecs-api.git",
     "git_branch": "master",
     "language": "golang",
     "test_framework": "ginkgo",

@@ -26,7 +26,7 @@ def demo_incremental_testing():
     project_data = {
         "name": "增量测试演示项目",
         "description": "演示智能增量测试和自动修复功能",
-        "git_url": "ssh://git@bt.baishancloud.com:7999/baishanone/cloud-ecs-api.git",
+        "git_url": "ssh://git@bt.xxxcloud.com:7999/xxxone/cloud-ecs-api.git",
         "git_branch": "master",
         "language": "golang",
         "test_framework": "ginkgo",

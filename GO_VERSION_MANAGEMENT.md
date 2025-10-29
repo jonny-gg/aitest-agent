@@ -168,8 +168,8 @@ RUN bash -c "source ${GVM_ROOT}/scripts/gvm && \
 GVM_ROOT=/root/.gvm
 GOPATH=/root/go
 GO111MODULE=on
-GOPRIVATE=bt.baishancloud.com/*
-GONOSUMDB=bt.baishancloud.com/*
+GOPRIVATE=bt.xxxcloud.com/*
+GONOSUMDB=bt.xxxcloud.com/*
 GOPROXY=https://goproxy.cn,direct
 ```
 

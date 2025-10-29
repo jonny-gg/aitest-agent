@@ -11,7 +11,7 @@
 ### 原因 1: Vendor 模式限制
 项目使用了 vendor 模式管理依赖，但 Ginkgo 默认会查找 vendor 目录中的包。
 ```
-cannot find module providing package bt.baishancloud.com/baishanone/cloud-ecs-api/api/v1: 
+cannot find module providing package bt.xxxcloud.com/xxxone/cloud-ecs-api/api/v1: 
 import lookup disabled by -mod=vendor
 ```
 
@@ -21,15 +21,15 @@ import lookup disabled by -mod=vendor
 生成的测试文件导入了项目内部包作为外部依赖：
 ```go
 import (
-    "bt.baishancloud.com/baishanone/cloud-ecs-api/api/v1"
-    "bt.baishancloud.com/baishanone/cloud-ecs-api/internal/repo"
-    "bt.baishancloud.com/baishanone/cloud-ecs-api/internal/mocks"
+    "bt.xxxcloud.com/xxxone/cloud-ecs-api/api/v1"
+    "bt.xxxcloud.com/xxxone/cloud-ecs-api/internal/repo"
+    "bt.xxxcloud.com/xxxone/cloud-ecs-api/internal/mocks"
 )
 ```
 
 Go 模块系统尝试从远程下载这些包，但这些包只存在于本地项目中：
 ```
-module bt.baishancloud.com/baishanone: git ls-remote -q origin: exit status 128:
+module bt.xxxcloud.com/xxxone: git ls-remote -q origin: exit status 128:
 仓库未找到
 The requested repository does not exist, or you do not have permission to access it.
 ```
@@ -75,7 +75,7 @@ Ginkgo v2.27.1 需要 Go 1.23+，但项目可能使用较旧版本。
 package biz_test  // 外部测试包
 
 import (
-    "bt.baishancloud.com/baishanone/cloud-ecs-api/internal/biz/repo"  // 错误导入
+    "bt.xxxcloud.com/xxxone/cloud-ecs-api/internal/biz/repo"  // 错误导入
 )
 
 var _ = Describe("Config", func() {
@@ -118,7 +118,7 @@ import (
     . "github.com/onsi/ginkgo/v2"
     . "github.com/onsi/gomega"
     
-    "bt.baishancloud.com/baishanone/cloud-ecs-api/internal/biz"  // 导入被测包
+    "bt.xxxcloud.com/xxxone/cloud-ecs-api/internal/biz"  // 导入被测包
 )
 
 func TestBiz(t *testing.T) {

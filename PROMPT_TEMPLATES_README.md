@@ -52,7 +52,7 @@ prompt = templates.golang_ginkgo_test(
     params=["ctx context.Context", "req *pb.CreateUserRequest"],
     return_type="(*pb.CreateUserReply, error)",
     receiver="*UserService",
-    module_path="bt.baishancloud.com/baishanone/cloud-ecs-api",
+    module_path="bt.xxxcloud.com/xxxone/cloud-ecs-api",
     package_name="service",
     file_path="internal/service/user.go"
 )
@@ -216,7 +216,7 @@ import "your-module-path/internal/biz"
 
 **现在（正确）：**
 ```go
-import "bt.baishancloud.com/baishanone/cloud-ecs-api/internal/biz"
+import "bt.xxxcloud.com/xxxone/cloud-ecs-api/internal/biz"
 ```
 
 ### 自动推断的包名

@@ -223,7 +223,7 @@ def scenario_1_ginkgo_kratos():
     project_data = {
         "name": "Kratos User Service",
         "description": "使用Ginkgo BDD测试的Kratos微服务",
-        "git_url": "ssh://git@bt.baishancloud.com:7999/baishanone/cloud-ecs-api.git",
+        "git_url": "ssh://git@bt.xxxcloud.com:7999/xxxone/cloud-ecs-api.git",
         "git_branch": "master",
         "language": "golang",
         "test_framework": "ginkgo",
@@ -279,7 +279,7 @@ def scenario_2_smart_generation():
     project_data = {
         "name": "智能测试用例生成演示",
         "description": "展示基于代码复杂度的测试用例数量策略",
-        "git_url": "ssh://git@bt.baishancloud.com:7999/baishanone/cloud-ecs-api.git",
+        "git_url": "ssh://git@bt.xxxcloud.com:7999/xxxone/cloud-ecs-api.git",
         "git_branch": "master",
         "language": "golang",
         "test_framework": "ginkgo",
@@ -382,7 +382,7 @@ import (
     . "github.com/onsi/gomega"
     
     // 实际生成时会自动替换为你的模块路径，例如：
-    // "bt.baishancloud.com/baishanone/cloud-ecs-api/internal/service"
+    // "bt.xxxcloud.com/xxxone/cloud-ecs-api/internal/service"
     "your-module-path/internal/service"
 )
 
