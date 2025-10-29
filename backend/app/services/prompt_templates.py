@@ -231,6 +231,9 @@ It("should do something", func() {{
    - **Exception Case**: 异常输入测试（在注释中说明异常情况）
 6. 确保生成的代码能够通过 `go test -v` 编译
 7. It 块内只包含 `// TODO: 实现测试逻辑` 的占位符和详细的测试说明注释
+8. **❌ 不要生成未使用的变量声明** - 如果变量暂时不用，应该用注释形式说明，而不是实际声明
+9. **❌ 不要在 Describe 块顶部声明变量** - 变量应该在 BeforeEach 或具体的测试用例中声明
+10. **✅ 保持代码简洁** - 只生成必要的框架结构，避免冗余代码
 
 ## 测试框架结构示例
 
@@ -298,13 +301,14 @@ Describe("CalMemory")
 
 ```go
 var _ = Describe("XdyEcsBillCase", func() {{
-    // 这里可以声明共享变量，但通常为空或只声明结构体实例
-    // var xdyEcsBillCase *XdyEcsBillCase
+    // ❌ 不要在这里声明未使用的变量
+    // ✅ 只在需要时在 BeforeEach 或测试用例中声明
     
-    // BeforeEach 可以留空或只包含注释说明
+    // BeforeEach 如果不需要初始化，可以完全省略此块
+    // 如果需要初始化，只在注释中说明
     BeforeEach(func() {{
-        // TODO: 初始化测试对象
-        // 例如: xdyEcsBillCase = NewXdyEcsBillCase(...)
+        // TODO: 如果需要初始化测试对象，在这里说明
+        // 例如: 创建测试对象实例、准备测试数据等
     }})
 
     Describe("CalMemory", func() {{
@@ -478,22 +482,21 @@ var _ = Describe("XdyEcsBillCase", func() {{
 
 ```go
 var _ = Describe("CostCase", func() {{
-    // 这里声明需要的变量（通常只声明，不初始化）
-    // var costCase *CostCase
-    // var mockRepo *mocks.MockRepository  // 如果需要mock
-    // var ctx context.Context
+    // ❌ 不要在这里声明未使用的变量
+    // ✅ 变量应该在实际需要时才声明（在 BeforeEach 或测试用例中）
 
     BeforeEach(func() {{
-        // TODO: 初始化测试对象和mock对象
-        // 例如:
-        // ctrl := gomock.NewController(GinkgoT())
-        // mockRepo = mocks.NewMockRepository(ctrl)
-        // costCase = NewCostCase(mockRepo, ...)
+        // TODO: 如果需要初始化测试对象和mock对象，在这里说明步骤
+        // 说明需要的变量类型和初始化方式：
+        // - 创建 gomock Controller: ctrl := gomock.NewController(GinkgoT())
+        // - 创建 mock 对象: mockRepo := mocks.NewMockRepository(ctrl)
+        // - 初始化测试对象: costCase := NewCostCase(mockRepo, ...)
+        // - 创建 context: ctx := context.Background()
     }})
 
     AfterEach(func() {{
-        // TODO: 清理工作
-        // 例如: ctrl.Finish()
+        // TODO: 如果需要清理工作，在这里说明
+        // 例如: 调用 ctrl.Finish() 验证 mock 期望
     }})
 
     Describe("GetCustomerBill", func() {{
@@ -727,6 +730,8 @@ import (
 - 使用 Context 组织不同的测试场景（Normal/Boundary/Exception）
 - 使用 It 编写测试用例占位符
 - 根据建议的测试用例数量生成对应数量的 It 块
+- **❌ 不要在 Describe 块顶部声明未使用的变量**
+- **✅ 只在需要时才声明变量**（在 BeforeEach 或测试注释中说明需要的变量）
 
 ### 4. 注释说明要求
 每个 It 块内的注释必须包含：
@@ -742,11 +747,20 @@ import (
 - **Boundary Case**: 边界值和临界条件测试（零值、空值、最大/最小值）
 - **Exception Case**: 错误处理和异常情况测试（负数、无效输入、错误）
 
+### 6. 代码简洁性要求 ⭐ 重要
+- **❌ 绝对不要生成未使用的变量声明**
+- **❌ 不要在 Describe 块顶部使用 `var (...)` 声明变量**，除非这些变量确实会在 BeforeEach 中初始化
+- **✅ 如果变量暂时不需要，只在注释中说明即可**
+- **✅ 保持代码最小化**，只包含必要的框架结构
+- **✅ 如果 BeforeEach 不需要初始化任何东西，可以完全省略 BeforeEach 块**
+
 ## 优秀的测试模板参考
 
 请根据函数类型选择合适的测试策略：
 - **纯函数**：参考"模板1: 纯函数测试"
 - **有依赖的方法**：参考"模板2: 使用 Mock 测试"
+
+**注意**: 以下示例中的实际实现代码仅供参考，你生成的框架代码应该只包含注释说明，不包含具体实现。
 
 ### 纯函数测试示例
 
