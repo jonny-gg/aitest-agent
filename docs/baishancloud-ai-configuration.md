@@ -49,8 +49,8 @@
 ```json
 {
   "data": {
-    "key": "sk-XQVMg0fOf32tk30d609e49A9E38a4eC895Dc7dB28e2d7561",
-    "display_key": "sk-XQVMg0fOf32tk30d****************95Dc7dB28e2d7561",
+    "key": "sk-xxx",
+    "display_key": "sk-xxx",
     "models": "Qwen3-235B-A22B-2507,Qwen3-32B-FP8,GLM-4.5,DeepSeek-V3",
     "unlimited_quota": true
   }
