@@ -1060,6 +1060,251 @@ TEST(TestSuiteName, TestName) {{
 """
     
     @staticmethod
+    def cpp_google_test_with_strategy(
+        func_name: str,
+        func_body: str,
+        params: List[str],
+        return_type: str,
+        test_framework: str = "google_test",
+        total_tests: int = 3,
+        normal_cases: int = 1,
+        edge_cases: int = 1,
+        error_cases: int = 1,
+        executable_lines: int = 0,
+        complexity: int = 1
+    ) -> str:
+        """
+        C++ 增强测试提示词（带智能测试用例策略）
+        
+        这是一个详细的、类似 Go 语言质量的 C++ 测试提示词模板
+        """
+        
+        # 根据测试框架选择示例代码
+        if test_framework == "google_test":
+            framework_examples = """
+## Google Test 测试框架说明
+
+### 基本结构
+```cpp
+TEST(TestSuiteName, TestCaseName) {
+    // Arrange - 准备测试数据和环境
+    
+    // Act - 执行被测试的函数/方法
+    
+    // Assert - 验证结果
+    EXPECT_EQ(expected, actual);
+}
+```
+
+### 常用断言宏
+- `EXPECT_EQ(expected, actual)` - 期望相等
+- `EXPECT_NE(val1, val2)` - 期望不相等
+- `EXPECT_LT(val1, val2)` - 期望小于
+- `EXPECT_LE(val1, val2)` - 期望小于等于
+- `EXPECT_GT(val1, val2)` - 期望大于
+- `EXPECT_GE(val1, val2)` - 期望大于等于
+- `EXPECT_TRUE(condition)` - 期望为真
+- `EXPECT_FALSE(condition)` - 期望为假
+- `EXPECT_STREQ(str1, str2)` - 期望字符串相等
+- `EXPECT_THROW(statement, exception)` - 期望抛出异常
+- `EXPECT_NO_THROW(statement)` - 期望不抛出异常
+
+### EXPECT vs ASSERT
+- `EXPECT_*`: 测试失败后继续执行后续测试
+- `ASSERT_*`: 测试失败后立即终止当前测试
+"""
+        else:  # catch2
+            framework_examples = """
+## Catch2 测试框架说明
+
+### 基本结构
+```cpp
+TEST_CASE("Test description", "[tag]") {
+    SECTION("Section description") {
+        // Arrange
+        // Act
+        // Assert
+        REQUIRE(condition);
+    }
+}
+```
+
+### 常用断言
+- `REQUIRE(condition)` - 必须满足（失败即终止）
+- `CHECK(condition)` - 应该满足（失败继续）
+- `REQUIRE_THROWS(expr)` - 必须抛出异常
+"""
+        
+        param_str = ', '.join(params) if params else ''
+        
+        return f"""请为以下 C++ 函数生成高质量的单元测试。
+
+## 📊 智能测试策略分析
+
+根据代码复杂度分析，为此函数制定的测试策略：
+- **可执行代码行数**: {executable_lines} 行
+- **圈复杂度**: {complexity}
+- **建议测试用例总数**: {total_tests} 个
+  - ✅ 正常场景: {normal_cases} 个
+  - ⚠️  边界场景: {edge_cases} 个  
+  - ❌ 异常场景: {error_cases} 个
+
+## 🎯 目标函数
+
+```cpp
+{return_type} {func_name}({param_str}) {{
+{func_body}
+}}
+```
+
+{framework_examples}
+
+## 📋 测试设计原则
+
+### 1. AAA 模式（Arrange-Act-Assert）
+每个测试用例必须遵循三段式结构：
+```cpp
+TEST(TestSuite, TestCase) {{
+    // Arrange - 准备测试数据和环境
+    MyClass obj;
+    int input = 42;
+    
+    // Act - 执行被测试的方法
+    int result = obj.methodUnderTest(input);
+    
+    // Assert - 验证结果是否符合预期
+    EXPECT_EQ(expected, result);
+}}
+```
+
+### 2. 测试场景分类
+
+#### ✅ 正常场景测试 (Normal Cases) - {normal_cases} 个
+- 测试典型的业务流程和预期输入
+- 验证正常情况下的输出结果
+- 示例：
+  - 有效输入返回正确结果
+  - 标准工作流程
+  - 常见用例场景
+
+#### ⚠️ 边界场景测试 (Edge Cases) - {edge_cases} 个  
+- 测试边界值和临界条件
+- 包括：零值、空值、最大值、最小值、空容器
+- 示例：
+  - 空字符串、空指针、空容器
+  - 数值为 0、-1、INT_MAX、INT_MIN
+  - 容器大小为 0 或 1
+  - 临界阈值
+
+#### ❌ 异常场景测试 (Error Cases) - {error_cases} 个
+- 测试错误处理和异常情况
+- 包括：无效输入、越界访问、资源不足、异常抛出
+- 示例：
+  - 空指针解引用（如果适用）
+  - 数组越界访问
+  - 除零错误
+  - 内存分配失败
+  - 异常抛出验证
+
+### 3. C++ 最佳实践
+
+**内存管理**:
+- ✅ 使用智能指针（std::unique_ptr, std::shared_ptr）代替裸指针
+- ✅ 测试资源释放（RAII 原则）
+- ✅ 检查内存泄漏（可以在测试中使用 valgrind）
+
+**异常安全**:
+- ✅ 测试异常抛出场景
+- ✅ 验证异常安全级别
+- ✅ 使用 EXPECT_THROW / EXPECT_NO_THROW
+
+**类型安全**:
+- ✅ 测试类型转换
+- ✅ 测试模板特化（如果适用）
+- ✅ 验证编译时检查
+
+**测试独立性**:
+- ✅ 每个测试用例独立运行
+- ✅ 不依赖其他测试的执行顺序
+- ✅ 清理测试环境（使用 Fixture 或 teardown）
+
+### 4. 命名规范
+
+**测试套件命名**: `FunctionNameTest` 或 `ClassNameTest`
+**测试用例命名**: 使用描述性名称，说明测试内容和预期结果
+```cpp
+// 好的命名示例
+TEST(CalculatorTest, AddTwoPositiveNumbers_ReturnsCorrectSum)
+TEST(StringUtilTest, SplitEmptyString_ReturnsEmptyVector)
+TEST(FileReaderTest, ReadNonExistentFile_ThrowsFileNotFoundException)
+
+// 避免的命名
+TEST(Test1, Test)  // ❌ 不清晰
+TEST(Foo, Bar)     // ❌ 无意义
+```
+
+## 📝 测试代码要求
+
+1. **必须生成 {total_tests} 个测试用例**，按照策略分配
+2. **每个测试用例必须包含清晰的注释**，说明测试目的
+3. **使用描述性的测试名称**
+4. **严格遵循 AAA 模式**
+5. **不要包含 #include 语句**（会在合并时统一添加）
+6. **只返回测试函数代码**，不要包含 main 函数
+7. **确保测试代码可以编译通过**
+8. **适当使用断言宏**，选择最合适的断言类型
+
+## 🎨 代码风格
+
+- 使用 4 空格缩进
+- 左大括号不换行
+- 变量名使用 snake_case
+- 常量使用 UPPER_CASE
+- 每个测试用例之间空一行
+
+## 示例输出格式
+
+```cpp
+// 测试正常场景：有效输入
+TEST({func_name}Test, ValidInput_ReturnsExpectedResult) {{
+    // Arrange
+    int input = 10;
+    int expected = 20;
+    
+    // Act
+    int result = {func_name}(input);
+    
+    // Assert
+    EXPECT_EQ(expected, result);
+}}
+
+// 测试边界场景：零值输入
+TEST({func_name}Test, ZeroInput_ReturnsZero) {{
+    // Arrange
+    int input = 0;
+    
+    // Act
+    int result = {func_name}(input);
+    
+    // Assert
+    EXPECT_EQ(0, result);
+}}
+
+// 测试异常场景：无效输入
+TEST({func_name}Test, NegativeInput_ThrowsInvalidArgumentException) {{
+    // Arrange
+    int input = -1;
+    
+    // Act & Assert
+    EXPECT_THROW({func_name}(input), std::invalid_argument);
+}}
+```
+
+请严格按照以上要求，生成 {total_tests} 个高质量的测试用例（{normal_cases} 个正常 + {edge_cases} 个边界 + {error_cases} 个异常）。
+只返回测试代码，不要包含任何额外的解释或 markdown 标记。
+"""
+    
+    @staticmethod
     def cpp_fix_test(
         original_test: str,
         error_output: str
@@ -1114,6 +1359,256 @@ TEST(TestSuiteName, TestName) {{
 4. 适当的断言
 
 请只返回测试代码，不要包含额外的解释。
+"""
+    
+    @staticmethod
+    def c_unit_test_with_strategy(
+        func_name: str,
+        func_body: str,
+        params: List[str],
+        return_type: str,
+        test_framework: str = "cunit",
+        total_tests: int = 3,
+        normal_cases: int = 1,
+        edge_cases: int = 1,
+        error_cases: int = 1,
+        executable_lines: int = 0,
+        complexity: int = 1
+    ) -> str:
+        """
+        C 语言增强测试提示词（带智能测试用例策略）
+        
+        详细的、类似 Go 语言质量的 C 测试提示词模板
+        """
+        
+        # 根据测试框架选择示例代码
+        if test_framework == "cunit":
+            framework_examples = """
+## CUnit 测试框架说明
+
+### 基本结构
+```c
+void test_function_name(void) {
+    // Arrange - 准备测试数据
+    
+    // Act - 执行被测试的函数
+    
+    // Assert - 验证结果
+    CU_ASSERT_EQUAL(expected, actual);
+}
+```
+
+### 常用断言宏
+- `CU_ASSERT(condition)` - 断言条件为真
+- `CU_ASSERT_TRUE(value)` - 断言值为真
+- `CU_ASSERT_FALSE(value)` - 断言值为假
+- `CU_ASSERT_EQUAL(expected, actual)` - 断言相等
+- `CU_ASSERT_NOT_EQUAL(val1, val2)` - 断言不相等
+- `CU_ASSERT_PTR_EQUAL(expected, actual)` - 断言指针相等
+- `CU_ASSERT_PTR_NULL(ptr)` - 断言指针为 NULL
+- `CU_ASSERT_PTR_NOT_NULL(ptr)` - 断言指针不为 NULL
+- `CU_ASSERT_STRING_EQUAL(str1, str2)` - 断言字符串相等
+"""
+        else:  # unity
+            framework_examples = """
+## Unity 测试框架说明
+
+### 基本结构
+```c
+void test_function_name(void) {
+    // Arrange
+    // Act
+    // Assert
+    TEST_ASSERT_EQUAL(expected, actual);
+}
+```
+
+### 常用断言宏
+- `TEST_ASSERT(condition)` - 断言条件为真
+- `TEST_ASSERT_TRUE(condition)` - 断言为真
+- `TEST_ASSERT_FALSE(condition)` - 断言为假
+- `TEST_ASSERT_EQUAL(expected, actual)` - 断言相等
+- `TEST_ASSERT_NULL(ptr)` - 断言指针为 NULL
+- `TEST_ASSERT_NOT_NULL(ptr)` - 断言指针不为 NULL
+"""
+        
+        param_str = ', '.join(params) if params else 'void'
+        
+        return f"""请为以下 C 函数生成高质量的单元测试。
+
+## 📊 智能测试策略分析
+
+根据代码复杂度分析，为此函数制定的测试策略：
+- **可执行代码行数**: {executable_lines} 行
+- **圈复杂度**: {complexity}
+- **建议测试用例总数**: {total_tests} 个
+  - ✅ 正常场景: {normal_cases} 个
+  - ⚠️  边界场景: {edge_cases} 个
+  - ❌ 异常场景: {error_cases} 个
+
+## 🎯 目标函数
+
+```c
+{return_type} {func_name}({param_str}) {{
+{func_body}
+}}
+```
+
+{framework_examples}
+
+## 📋 测试设计原则
+
+### 1. AAA 模式（Arrange-Act-Assert）
+每个测试用例必须遵循三段式结构：
+```c
+void test_{func_name}_valid_input(void) {{
+    // Arrange - 准备测试数据
+    int input = 10;
+    int expected = 20;
+    
+    // Act - 执行被测试的函数
+    int result = {func_name}(input);
+    
+    // Assert - 验证结果
+    CU_ASSERT_EQUAL(expected, result);
+}}
+```
+
+### 2. 测试场景分类
+
+#### ✅ 正常场景测试 (Normal Cases) - {normal_cases} 个
+- 测试典型的业务流程和预期输入
+- 验证正常情况下的输出结果
+- 示例：
+  - 有效输入返回正确结果
+  - 标准工作流程
+  - 常见用例场景
+
+#### ⚠️ 边界场景测试 (Edge Cases) - {edge_cases} 个
+- 测试边界值和临界条件
+- 包括：零值、NULL 指针、空字符串、最大/最小值
+- 示例：
+  - NULL 指针处理
+  - 空字符串 ""
+  - 数值为 0、-1、INT_MAX、INT_MIN
+  - 数组长度为 0 或 1
+  - 缓冲区边界
+
+#### ❌ 异常场景测试 (Error Cases) - {error_cases} 个
+- 测试错误处理和异常情况
+- 包括：无效输入、越界访问、内存不足
+- 示例：
+  - 非法指针（如果适用）
+  - 数组越界
+  - 除零错误
+  - 内存分配失败
+  - 错误返回值验证
+
+### 3. C 语言最佳实践
+
+**内存管理**:
+- ✅ 测试动态内存分配和释放
+- ✅ 检查内存泄漏
+- ✅ 验证 NULL 指针处理
+- ✅ 测试缓冲区溢出保护
+
+**指针安全**:
+- ✅ 验证 NULL 指针检查
+- ✅ 测试指针算术运算
+- ✅ 检查悬挂指针
+
+**错误处理**:
+- ✅ 测试返回值（-1, 0, NULL 等错误码）
+- ✅ 验证 errno 设置（如果适用）
+- ✅ 测试边界条件
+
+**字符串处理**:
+- ✅ 验证 NULL 终止符
+- ✅ 测试缓冲区大小
+- ✅ 检查字符串函数安全性
+
+**测试独立性**:
+- ✅ 每个测试用例独立运行
+- ✅ 不依赖全局状态
+- ✅ 清理动态分配的资源
+
+### 4. 命名规范
+
+**测试函数命名**: `test_<function_name>_<scenario>`
+```c
+// 好的命名示例
+void test_add_two_positive_numbers(void)
+void test_split_empty_string(void)
+void test_open_nonexistent_file(void)
+
+// 避免的命名
+void test1(void)  // ❌ 不清晰
+void foo(void)    // ❌ 无意义
+```
+
+## 📝 测试代码要求
+
+1. **必须生成 {total_tests} 个测试函数**，按照策略分配
+2. **每个测试函数必须包含清晰的注释**，说明测试目的
+3. **使用描述性的函数名称**
+4. **严格遵循 AAA 模式**
+5. **不要包含 #include 语句**（会在合并时统一添加）
+6. **只返回测试函数代码**，不要包含 main 函数或套件注册代码
+7. **确保测试代码可以编译通过**
+8. **适当使用断言宏**，选择最合适的断言类型
+9. **注意内存管理**，测试后清理资源
+
+## 🎨 代码风格
+
+- 使用 4 空格缩进
+- 左大括号不换行
+- 变量名使用 snake_case
+- 常量使用 UPPER_CASE
+- 每个测试函数之间空一行
+
+## 示例输出格式
+
+```c
+// 测试正常场景：有效输入
+void test_{func_name}_valid_input(void) {{
+    // Arrange
+    int input = 10;
+    int expected = 20;
+    
+    // Act
+    int result = {func_name}(input);
+    
+    // Assert
+    CU_ASSERT_EQUAL(expected, result);
+}}
+
+// 测试边界场景：零值输入
+void test_{func_name}_zero_input(void) {{
+    // Arrange
+    int input = 0;
+    
+    // Act
+    int result = {func_name}(input);
+    
+    // Assert
+    CU_ASSERT_EQUAL(0, result);
+}}
+
+// 测试异常场景：NULL 指针
+void test_{func_name}_null_pointer(void) {{
+    // Arrange
+    char *input = NULL;
+    
+    // Act
+    int result = {func_name}(input);
+    
+    // Assert
+    CU_ASSERT_EQUAL(-1, result);  // 假设返回 -1 表示错误
+}}
+```
+
+请严格按照以上要求，生成 {total_tests} 个高质量的测试用例（{normal_cases} 个正常 + {edge_cases} 个边界 + {error_cases} 个异常）。
+只返回测试函数代码，不要包含任何额外的解释或 markdown 标记。
 """
     
     @staticmethod

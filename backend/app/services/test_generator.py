@@ -2075,33 +2075,117 @@ class CppTestGenerator(TestGenerator):
         test_dir: Path = None,
         use_hybrid_mode: bool = False
     ) -> str:
-        """为C++源文件的所有函数生成测试"""
-        # C++测试暂不支持混合模式，直接使用纯AI生成
-        # 简化实现：为每个函数调用 generate_test 并合并
-        functions = file_analysis.get('functions', [])
-        test_codes = []
+        """
+        为C++源文件的所有函数生成测试（支持智能测试用例策略）
         
+        新功能：
+        - 使用智能测试用例策略根据代码复杂度决定测试数量
+        - 自动分配正常/边界/异常场景测试用例
+        """
+        functions = file_analysis.get('functions', [])
+        
+        if not functions:
+            raise Exception("没有找到可测试的函数")
+        
+        # 获取智能测试用例策略
+        from .test_case_strategy import get_test_case_strategy
+        strategy_engine = get_test_case_strategy()
+        file_strategy = strategy_engine.calculate_for_file(file_analysis)
+        
+        # 记录测试策略
+        logger.info(f"📊 C++ 文件测试策略:")
+        logger.info(f"   总测试用例: {file_strategy['total_test_cases']} 个")
+        logger.info(f"   函数数量: {len(functions)} 个")
+        
+        # 为每个函数生成测试（带智能策略）
+        test_codes = []
         for function in functions:
             try:
-                test_code = self.generate_test(function, language, test_framework)
+                func_name = function.get('name', 'unknown')
+                func_strategy = file_strategy['function_strategies'].get(func_name, {})
+                
+                # 记录该函数的测试策略
+                if func_strategy:
+                    logger.info(f"   {func_name}: {func_strategy.get('total_count', 3)} 个测试用例 "
+                               f"(正常:{func_strategy.get('normal_cases', 1)}, "
+                               f"边界:{func_strategy.get('edge_cases', 1)}, "
+                               f"异常:{func_strategy.get('error_cases', 1)})")
+                
+                test_code = self.generate_test(function, language, test_framework, func_strategy)
                 test_codes.append(test_code)
             except Exception as e:
                 logger.warning(f"为函数 {function.get('name', 'unknown')} 生成测试失败: {e}")
         
-        # 合并所有测试代码（简化版，保留第一个的头部，其他的只保留测试函数）
         if not test_codes:
             raise Exception("没有成功生成任何测试代码")
         
-        return "\n\n".join(test_codes)
+        # 合并所有测试代码
+        return self._merge_test_codes(test_codes, file_analysis, test_framework)
+    
+    def _merge_test_codes(self, test_codes: List[str], file_analysis: Dict, test_framework: str) -> str:
+        """
+        智能合并多个测试代码
+        
+        Args:
+            test_codes: 各个函数的测试代码列表
+            file_analysis: 文件分析信息
+            test_framework: 测试框架
+            
+        Returns:
+            合并后的完整测试文件
+        """
+        if not test_codes:
+            return ""
+        
+        # 提取文件路径信息
+        file_path = file_analysis.get('file_path', '')
+        source_file = Path(file_path).stem if file_path else 'test'
+        
+        # 构建头部（includes 和 using）
+        if test_framework == "google_test":
+            header = f"""#include <gtest/gtest.h>
+#include "{source_file}.h"
+
+// 自动生成的 Google Test 单元测试
+// 使用智能测试用例策略，根据代码复杂度优化测试覆盖
+
+"""
+        else:  # catch2
+            header = f"""#define CATCH_CONFIG_MAIN
+#include <catch2/catch.hpp>
+#include "{source_file}.h"
+
+"""
+        
+        # 合并所有测试代码（去除重复的头部）
+        merged_tests = []
+        for test_code in test_codes:
+            # 移除单个测试中的 #include 重复声明
+            cleaned = test_code
+            if '#include' in cleaned:
+                lines = cleaned.split('\n')
+                cleaned = '\n'.join([line for line in lines if not line.strip().startswith('#include')])
+            merged_tests.append(cleaned.strip())
+        
+        return header + '\n\n'.join(merged_tests)
     
     def generate_test(
         self,
         function_info: Dict,
         language: str = "cpp",
-        test_framework: str = "google_test"
+        test_framework: str = "google_test",
+        test_strategy: Dict = None
     ) -> str:
-        """为C++函数生成测试"""
-        prompt = self._build_prompt(function_info, test_framework)
+        """
+        为C++函数生成测试（支持智能测试用例策略）
+        
+        Args:
+            function_info: 函数信息
+            language: 语言
+            test_framework: 测试框架
+            test_strategy: 智能测试用例策略（包含 total_count, normal_cases, edge_cases, error_cases）
+        """
+        prompt = self._build_prompt(function_info, test_framework, test_strategy)
         
         try:
             if self.ai_provider in ["openai", "baishan"]:
@@ -2220,48 +2304,40 @@ class CppTestGenerator(TestGenerator):
             logger.error(f"C++测试修复失败: {e}")
             raise
     
-    def _build_prompt(self, function_info: Dict, test_framework: str) -> str:
-        """构建提示词"""
-        func_name = function_info['name']
+    def _build_prompt(self, function_info: Dict, test_framework: str, test_strategy: Dict = None) -> str:
+        """
+        构建智能测试提示词（使用增强的 Prompt 模板）
+        
+        Args:
+            function_info: 函数信息
+            test_framework: 测试框架
+            test_strategy: 智能测试用例策略
+        """
+        from .prompt_templates import PromptTemplates
+        
+        func_name = function_info.get('name', 'unknown')
         func_body = function_info.get('body', '')
+        params = function_info.get('params', [])
+        return_type = function_info.get('return_type', 'void')
         
-        if test_framework == "google_test":
-            framework_guide = """
-## Google Test示例
-```cpp
-TEST(TestSuiteName, TestName) {
-    // Arrange
-    // Act
-    // Assert
-    EXPECT_EQ(expected, actual);
-    ASSERT_TRUE(condition);
-}
-```
-"""
+        # 如果有测试策略，使用增强的 prompt
+        if test_strategy:
+            return PromptTemplates.cpp_google_test_with_strategy(
+                func_name=func_name,
+                func_body=func_body,
+                params=params,
+                return_type=return_type,
+                test_framework=test_framework,
+                total_tests=test_strategy.get('total_count', 3),
+                normal_cases=test_strategy.get('normal_cases', 1),
+                edge_cases=test_strategy.get('edge_cases', 1),
+                error_cases=test_strategy.get('error_cases', 1),
+                executable_lines=function_info.get('executable_lines', 0),
+                complexity=function_info.get('complexity', 1)
+            )
         else:
-            framework_guide = "使用Catch2框架"
-        
-        prompt = f"""请为以下C++函数生成完整的单元测试。
-
-## 目标函数
-```cpp
-{func_name}(...) {{
-{func_body}
-}}
-```
-
-## 测试框架
-{framework_guide}
-
-## 测试要求
-1. 覆盖正常情况、边界条件和异常情况
-2. 使用AAA模式（Arrange-Act-Assert）
-3. 测试用例应该独立且可重复
-4. 包含清晰的测试描述
-
-请只返回测试代码，不要包含额外的解释。
-"""
-        return prompt
+            # 回退到简单 prompt
+            return PromptTemplates.cpp_google_test(func_name, func_body)
     
     def _extract_code_block(self, text: str) -> str:
         """从AI响应中提取代码块，清除所有markdown标识"""
@@ -2338,33 +2414,118 @@ class CTestGenerator(TestGenerator):
         test_dir: Path = None,
         use_hybrid_mode: bool = False
     ) -> str:
-        """为C源文件的所有函数生成测试"""
-        # C测试暂不支持混合模式，直接使用纯AI生成
-        # 简化实现：为每个函数调用 generate_test 并合并
-        functions = file_analysis.get('functions', [])
-        test_codes = []
+        """
+        为C源文件的所有函数生成测试（支持智能测试用例策略）
         
+        新功能：
+        - 使用智能测试用例策略根据代码复杂度决定测试数量
+        - 自动分配正常/边界/异常场景测试用例
+        """
+        functions = file_analysis.get('functions', [])
+        
+        if not functions:
+            raise Exception("没有找到可测试的函数")
+        
+        # 获取智能测试用例策略
+        from .test_case_strategy import get_test_case_strategy
+        strategy_engine = get_test_case_strategy()
+        file_strategy = strategy_engine.calculate_for_file(file_analysis)
+        
+        # 记录测试策略
+        logger.info(f"📊 C 文件测试策略:")
+        logger.info(f"   总测试用例: {file_strategy['total_test_cases']} 个")
+        logger.info(f"   函数数量: {len(functions)} 个")
+        
+        # 为每个函数生成测试（带智能策略）
+        test_codes = []
         for function in functions:
             try:
-                test_code = self.generate_test(function, language, test_framework)
+                func_name = function.get('name', 'unknown')
+                func_strategy = file_strategy['function_strategies'].get(func_name, {})
+                
+                # 记录该函数的测试策略
+                if func_strategy:
+                    logger.info(f"   {func_name}: {func_strategy.get('total_count', 3)} 个测试用例 "
+                               f"(正常:{func_strategy.get('normal_cases', 1)}, "
+                               f"边界:{func_strategy.get('edge_cases', 1)}, "
+                               f"异常:{func_strategy.get('error_cases', 1)})")
+                
+                test_code = self.generate_test(function, language, test_framework, func_strategy)
                 test_codes.append(test_code)
             except Exception as e:
                 logger.warning(f"为函数 {function.get('name', 'unknown')} 生成测试失败: {e}")
         
-        # 合并所有测试代码
         if not test_codes:
             raise Exception("没有成功生成任何测试代码")
         
-        return "\n\n".join(test_codes)
+        # 合并所有测试代码
+        return self._merge_test_codes(test_codes, file_analysis, test_framework)
+    
+    def _merge_test_codes(self, test_codes: List[str], file_analysis: Dict, test_framework: str) -> str:
+        """
+        智能合并多个 C 测试代码
+        
+        Args:
+            test_codes: 各个函数的测试代码列表
+            file_analysis: 文件分析信息
+            test_framework: 测试框架
+            
+        Returns:
+            合并后的完整测试文件
+        """
+        if not test_codes:
+            return ""
+        
+        # 提取文件路径信息
+        file_path = file_analysis.get('file_path', '')
+        source_file = Path(file_path).stem if file_path else 'test'
+        
+        # 构建头部
+        if test_framework == "cunit":
+            header = f"""#include <CUnit/CUnit.h>
+#include <CUnit/Basic.h>
+#include "{source_file}.h"
+
+// 自动生成的 CUnit 单元测试
+// 使用智能测试用例策略，根据代码复杂度优化测试覆盖
+
+"""
+        else:  # unity
+            header = f"""#include "unity.h"
+#include "{source_file}.h"
+
+// 自动生成的 Unity 单元测试
+
+"""
+        
+        # 合并所有测试代码
+        merged_tests = []
+        for test_code in test_codes:
+            cleaned = test_code
+            if '#include' in cleaned:
+                lines = cleaned.split('\n')
+                cleaned = '\n'.join([line for line in lines if not line.strip().startswith('#include')])
+            merged_tests.append(cleaned.strip())
+        
+        return header + '\n\n'.join(merged_tests)
     
     def generate_test(
         self,
         function_info: Dict,
         language: str = "c",
-        test_framework: str = "cunit"
+        test_framework: str = "cunit",
+        test_strategy: Dict = None
     ) -> str:
-        """为C函数生成测试"""
-        prompt = self._build_prompt(function_info, test_framework)
+        """
+        为C函数生成测试（支持智能测试用例策略）
+        
+        Args:
+            function_info: 函数信息
+            language: 语言
+            test_framework: 测试框架
+            test_strategy: 智能测试用例策略
+        """
+        prompt = self._build_prompt(function_info, test_framework, test_strategy)
         
         try:
             if self.ai_provider in ["openai", "baishan"]:
@@ -2483,32 +2644,40 @@ class CTestGenerator(TestGenerator):
             logger.error(f"C测试修复失败: {e}")
             raise
     
-    def _build_prompt(self, function_info: Dict, test_framework: str) -> str:
-        """构建提示词"""
-        func_name = function_info['name']
-        func_body = function_info.get('body', '')
+    def _build_prompt(self, function_info: Dict, test_framework: str, test_strategy: Dict = None) -> str:
+        """
+        构建智能测试提示词（使用增强的 Prompt 模板）
         
-        prompt = f"""请为以下C函数生成完整的单元测试。
-
-## 目标函数
-```c
-{func_name}(...) {{
-{func_body}
-}}
-```
-
-## 测试框架
-使用{test_framework}
-
-## 测试要求
-1. 覆盖正常情况、边界条件和异常情况
-2. 测试用例应该独立且可重复
-3. 包含清晰的测试描述
-4. 适当的断言
-
-请只返回测试代码，不要包含额外的解释。
-"""
-        return prompt
+        Args:
+            function_info: 函数信息
+            test_framework: 测试框架
+            test_strategy: 智能测试用例策略
+        """
+        from .prompt_templates import PromptTemplates
+        
+        func_name = function_info.get('name', 'unknown')
+        func_body = function_info.get('body', '')
+        params = function_info.get('params', [])
+        return_type = function_info.get('return_type', 'void')
+        
+        # 如果有测试策略，使用增强的 prompt
+        if test_strategy:
+            return PromptTemplates.c_unit_test_with_strategy(
+                func_name=func_name,
+                func_body=func_body,
+                params=params,
+                return_type=return_type,
+                test_framework=test_framework,
+                total_tests=test_strategy.get('total_count', 3),
+                normal_cases=test_strategy.get('normal_cases', 1),
+                edge_cases=test_strategy.get('edge_cases', 1),
+                error_cases=test_strategy.get('error_cases', 1),
+                executable_lines=function_info.get('executable_lines', 0),
+                complexity=function_info.get('complexity', 1)
+            )
+        else:
+            # 回退到简单 prompt
+            return PromptTemplates.c_unit_test(func_name, func_body, test_framework)
     
     def _extract_code_block(self, text: str) -> str:
         """从AI响应中提取代码块，清除所有markdown标识"""
