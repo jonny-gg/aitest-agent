@@ -13,6 +13,14 @@
 - 支持多种测试框架（Ginkgo, Go Test, GTest, CUnit）
 - 自动生成高质量、可运行的测试代码
 
+### 📁 多目录递归扫描 **NEW**
+- 支持数组形式的 `source_directory` 配置
+- 自动递归遍历所有子目录
+- 一次性为多个目录生成测试用例
+- 测试文件采用 Go 同包测试策略（与源文件在同一目录）
+- **不需要** `test_directory` 参数（Go 语言自动处理）
+- 使用方式：只需配置 `source_directory: ["internal/biz", "pkg"]`
+
 ### 🔧 自动修复
 - 语法错误自动修复（95%+ 成功率）
 - 编译错误自动优化
@@ -73,13 +81,33 @@ python example_generate_tests.py
 # 选择场景 1 - Ginkgo BDD 测试
 ```
 
-### 场景 2: 已有测试修复
+### 场景 2: 多目录递归测试生成 **NEW**
+```bash
+python example_generate_tests.py
+# 选择任意场景（1、2、3），自动递归扫描多个目录
+```
+
+**配置示例**：
+```python
+{
+    "source_directory": ["internal/biz", "pkg"],  # 数组形式
+    # "test_directory" 不需要了！
+}
+```
+
+**目录结构示例**：
+```
+源文件：internal/biz/user.go    → 生成：internal/biz/user_test.go
+源文件：pkg/utils/string.go    → 生成：pkg/utils/string_test.go
+```
+
+### 场景 3: 已有测试修复
 ```bash
 python example_fix_tests.py
 # 自动修复失败的测试
 ```
 
-### 场景 3: 智能测试策略
+### 场景 4: 智能测试策略
 ```bash
 # 基于代码复杂度自动调整测试用例数量
 # 简单函数 → 2-3个测试

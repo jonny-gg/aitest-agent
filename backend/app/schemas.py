@@ -1,6 +1,6 @@
 """Pydantic模型定义"""
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, List, Union
 from datetime import datetime
 from enum import Enum
 
@@ -42,8 +42,14 @@ class ProjectCreate(BaseModel):
     git_branch: str = "main"
     language: Language
     test_framework: TestFramework
-    source_directory: str = "."
-    test_directory: str = "tests"
+    source_directory: Union[str, List[str]] = Field(
+        default=".",
+        description="源代码目录，支持字符串（单目录）或数组（多目录递归）"
+    )
+    test_directory: Optional[str] = Field(
+        default=None,
+        description="测试目录（Go 语言忽略此参数，测试文件与源文件同目录）"
+    )
     coverage_threshold: float = 80.0
     auto_commit: bool = True
     create_pr: bool = True
@@ -58,7 +64,7 @@ class ProjectUpdate(BaseModel):
     description: Optional[str] = None
     git_branch: Optional[str] = None
     test_framework: Optional[TestFramework] = None
-    source_directory: Optional[str] = None
+    source_directory: Optional[Union[str, List[str]]] = None
     test_directory: Optional[str] = None
     coverage_threshold: Optional[float] = None
     auto_commit: Optional[bool] = None
@@ -78,7 +84,7 @@ class ProjectResponse(BaseModel):
     git_branch: str
     language: Language
     test_framework: TestFramework
-    source_directory: str
+    source_directory: Union[str, List[str]]
     test_directory: str
     coverage_threshold: float
     auto_commit: bool

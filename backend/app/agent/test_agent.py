@@ -67,10 +67,25 @@ class TestGenerationAgent:
             await self._update_progress(progress_callback, 30, "ANALYZING", "分析代码结构...")
             analyzer = get_analyzer(project_config['language'])
             
-            source_dir = Path(repo_path) / project_config.get('source_directory', '.')
-            analysis_results = analyzer.analyze_directory(str(source_dir))
+            # 支持字符串或数组形式的 source_directory
+            source_directories = project_config.get('source_directory', '.')
+            if isinstance(source_directories, str):
+                # 单目录
+                source_directories = [source_directories]
             
-            logger.info(f"🔍 发现 {len(analysis_results)} 个文件待测试")
+            # 遍历所有目录并收集分析结果
+            analysis_results = []
+            for source_dir in source_directories:
+                dir_path = Path(repo_path) / source_dir
+                if dir_path.exists():
+                    logger.info(f"📁 分析目录: {source_dir}")
+                    results = analyzer.analyze_directory(str(dir_path))
+                    analysis_results.extend(results)
+                    logger.info(f"   └─ 发现 {len(results)} 个文件")
+                else:
+                    logger.warning(f"⚠️  目录不存在，跳过: {source_dir}")
+            
+            logger.info(f"🔍 总计发现 {len(analysis_results)} 个文件待测试")
             
             # 3. 生成测试（智能跳过已有测试）
             await self._update_progress(progress_callback, 50, "GENERATING", "检查并生成测试代码...")
@@ -376,7 +391,17 @@ Task ID: {task_id}
         language: str,
         test_framework: str = None
     ) -> Path:
-        """获取预期的测试文件路径（一个源文件对应一个测试文件）"""
+        """
+        获取预期的测试文件路径（一个源文件对应一个测试文件）
+        
+        Go 语言采用同包测试策略：
+        - 测试文件放在源文件同一目录下
+        - 测试文件名：源文件名 + _test 后缀
+        
+        例如：
+        源文件：internal/biz/user.go
+        测试文件：internal/biz/user_test.go
+        """
         # 根据语言确定文件扩展名
         extensions = {
             'golang': '_test.go',
@@ -384,10 +409,16 @@ Task ID: {task_id}
             'c': '_test.c'
         }
         
-        # 生成测试文件名：源文件名 + 测试后缀
+        # 对于 Go 语言，使用同包测试策略：测试文件和源文件在同一目录
+        if language == 'golang':
+            source_path = Path(source_file)
+            test_file_name = f"{source_path.stem}{extensions[language]}"
+            # 返回源文件所在目录 + 测试文件名
+            return source_path.parent / test_file_name
+        
+        # 其他语言：保持原逻辑，放在 test_dir 下
         source_name = Path(source_file).stem
         test_file_name = f"{source_name}{extensions.get(language, '_test.txt')}"
-        
         return test_dir / test_file_name
     
     def _save_test_file(
@@ -406,6 +437,9 @@ Task ID: {task_id}
             test_framework
         )
         
+        # 确保测试文件目录存在
+        test_file_path.parent.mkdir(parents=True, exist_ok=True)
+        
         # 检查是否有大小写冲突的文件
         if test_file_path.exists():
             # 文件已存在，检查是否是大小写不同的重复
@@ -418,13 +452,14 @@ Task ID: {task_id}
         
         # 修复包名（对于 Golang）
         if language == 'golang':
-            test_code = self._fix_package_name(test_code, test_dir)
+            # 使用测试文件所在目录（即源文件目录）来确定包名
+            test_code = self._fix_package_name(test_code, test_file_path.parent)
         
         # 写入测试代码
         with open(test_file_path, 'w', encoding='utf-8') as f:
             f.write(test_code)
         
-        logger.debug(f"✅ 保存测试文件: {test_file_path.name}")
+        logger.debug(f"✅ 保存测试文件: {test_file_path}")
         return str(test_file_path)
     
     def _fix_package_name(self, test_code: str, test_dir: Path) -> str:

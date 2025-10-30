@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import String, Text, Float, Integer, Boolean, DateTime, JSON, Enum
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 import enum
 
 from app.config import get_settings
@@ -79,7 +79,10 @@ class Project(Base):
     test_framework: Mapped[TestFramework] = mapped_column(Enum(TestFramework), nullable=False)
     
     # 路径配置
-    source_directory: Mapped[str] = mapped_column(String(255), default=".")
+    # source_directory 支持字符串或数组（JSON类型）
+    # 字符串: "internal/biz" (单目录)
+    # 数组: ["internal/biz", "pkg"] (多目录递归)
+    source_directory: Mapped[Any] = mapped_column(JSON, default=".")
     test_directory: Mapped[str] = mapped_column(String(255), default="tests")
     
     # 测试配置

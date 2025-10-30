@@ -3,9 +3,12 @@
 AI Test Agent - 测试生成示例集合
 
 包含多种测试生成场景：
-1. 基础测试生成（Ginkgo框架）
-2. 智能测试生成（基于代码复杂度）
-3. 标准测试生成（go test框架）
+1. 基础测试生成（Ginkgo框架）- 支持多目录递归
+2. 智能测试生成（基于代码复杂度）- 支持多目录递归
+3. 标准测试生成（go test框架）- 支持多目录递归
+
+✨ 多目录支持：所有场景都使用数组形式的 source_directory
+   例如: ["internal/biz", "pkg"] - 自动递归遍历所有子目录
 """
 
 import requests
@@ -219,6 +222,10 @@ def scenario_1_ginkgo_kratos():
     print("   - 需要 BDD 风格测试（行为驱动开发）")
     print("   - 包含依赖注入的项目")
     print()
+    print("📁 多目录支持:")
+    print("   - 自动递归遍历 internal/biz 和 pkg 目录")
+    print("   - 为所有子目录下的 Go 文件生成测试")
+    print()
     
     project_data = {
         "name": "Kratos User Service",
@@ -227,8 +234,8 @@ def scenario_1_ginkgo_kratos():
         "git_branch": "master",
         "language": "golang",
         "test_framework": "ginkgo",
-        "source_directory": "internal/biz",
-        "test_directory": "internal/biz",
+        "source_directory": ["internal/biz", "pkg"],  # 多目录数组形式
+        # "test_directory": "internal/biz",  # Go 语言不需要，测试文件与源文件同目录
         "coverage_threshold": 80.0,
         "auto_commit": True,
         "create_pr": True
@@ -275,6 +282,10 @@ def scenario_2_smart_generation():
     print("   - 复杂函数 (30-50行): 生成 7-10 个测试用例")
     print("   - 超复杂函数 (> 50行): 生成 11-15 个测试用例")
     print()
+    print("📁 多目录支持:")
+    print("   - 自动递归遍历 internal/biz 和 pkg 目录")
+    print("   - 智能分析所有源文件的复杂度")
+    print()
     
     project_data = {
         "name": "智能测试用例生成演示",
@@ -283,8 +294,8 @@ def scenario_2_smart_generation():
         "git_branch": "master",
         "language": "golang",
         "test_framework": "ginkgo",
-        "source_directory": "internal/biz",
-        "test_directory": "internal/biz",
+        "source_directory": ["internal/biz", "pkg"],  # 多目录数组形式
+        # "test_directory": "internal/biz",  # Go 语言不需要，测试文件与源文件同目录
         "coverage_threshold": 80.0,
         "auto_commit": True,
         "create_pr": True
@@ -329,6 +340,10 @@ def scenario_3_standard_go_test():
     print("   - 使用 testing 包")
     print("   - Table-driven test 风格")
     print()
+    print("📁 多目录支持:")
+    print("   - 自动递归遍历 internal/biz 和 pkg 目录")
+    print("   - 使用标准 Go test 框架生成测试")
+    print()
     
     project_data = {
         "name": "Standard Go Test Project",
@@ -337,8 +352,8 @@ def scenario_3_standard_go_test():
         "git_branch": "main",
         "language": "golang",
         "test_framework": "go_test",
-        "source_directory": "pkg",
-        "test_directory": "pkg",
+        "source_directory": ["internal/biz", "pkg"],  # 多目录数组形式
+        # "test_directory": "pkg",  # Go 语言不需要，测试文件与源文件同目录
         "coverage_threshold": 75.0,
         "auto_commit": True,
         "create_pr": True
