@@ -35,6 +35,8 @@ ENV PATH="/usr/local/go/bin:${GOPATH}/bin:${PATH}"
 
 # 配置 Git 使用 SSH 访问私有仓库
 RUN git config --global url."ssh://git@bt.baishancloud.com:7999/".insteadOf "https://bt.baishancloud.com/" && \
+    git config --global user.name "ut-agent" && \
+    git config --global user.email "ut-agent@example.com" && \
     mkdir -p /root/.ssh && \
     chmod 700 /root/.ssh
 
