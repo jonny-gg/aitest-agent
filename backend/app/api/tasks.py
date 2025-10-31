@@ -97,12 +97,15 @@ async def get_task_coverage(
     return coverage
 
 
-@router.post("/fix-tests", response_model=TestFixResponse)
+@router.post("/fix-tests", response_model=TaskResponse)
 async def fix_tests(
-    fix_request: TestFixRequest
+    fix_request: TestFixRequest,
+    db: AsyncSession = Depends(get_db)
 ):
     """
-    修复已生成的测试代码（异步并发版本）
+    提交测试修复任务（异步模式）
+    
+    立即返回任务ID，用户可通过 GET /api/tasks/{task_id} 查询进度。
     
     用于修复之前生成的测试文件中的语法错误，支持：
     - 清理 markdown 标记
@@ -110,14 +113,71 @@ async def fix_tests(
     - 修复其他语法错误
     - 异步并发处理多个文件，大幅提升速度
     """
-    from app.services.test_fixer import TestFixer
+    from app.worker import run_test_fix_task
     from loguru import logger
+    from uuid import uuid4
     
     logger.info(f"🔧 收到测试修复请求:")
     logger.info(f"   工作空间: {fix_request.workspace_path}")
     logger.info(f"   测试目录: {fix_request.test_directory}")
     logger.info(f"   语言: {fix_request.language}")
     logger.info(f"   框架: {fix_request.test_framework}")
+    
+    try:
+        # 创建任务记录
+        from app.database import TaskStatus
+        
+        task = Task(
+            id=str(uuid4()),
+            project_id="fix-task",  # 修复任务使用固定的 project_id
+            status=TaskStatus.PENDING,
+            progress=0
+        )
+        
+        db.add(task)
+        await db.commit()
+        await db.refresh(task)
+        
+        # 准备修复配置
+        fix_config = {
+            'workspace_path': fix_request.workspace_path,
+            'test_directory': fix_request.test_directory,
+            'language': fix_request.language.value,
+            'test_framework': fix_request.test_framework.value,
+            'max_fix_attempts': fix_request.max_fix_attempts,
+            'auto_git_commit': fix_request.auto_git_commit,
+            'git_username': fix_request.git_username,
+            'git_branch_name': fix_request.git_branch_name,
+            'git_commit_message': fix_request.git_commit_message
+        }
+        
+        # 异步执行修复任务
+        run_test_fix_task.delay(task.id, fix_config)
+        
+        logger.info(f"✅ 测试修复任务已创建: {task.id}")
+        logger.info(f"   查询进度: GET /api/tasks/{task.id}")
+        
+        return task
+        
+    except Exception as e:
+        logger.error(f"❌ 创建测试修复任务失败: {e}")
+        raise HTTPException(status_code=500, detail=f"创建任务失败: {str(e)}")
+
+
+@router.post("/fix-tests-sync", response_model=TestFixResponse)
+async def fix_tests_sync(
+    fix_request: TestFixRequest
+):
+    """
+    同步修复测试代码（已废弃，建议使用异步版本）
+    
+    此接口会等待修复完成才返回，可能需要较长时间。
+    建议使用 POST /api/tasks/fix-tests 异步接口。
+    """
+    from app.services.test_fixer import TestFixer
+    from loguru import logger
+    
+    logger.warning("⚠️ 使用了同步修复接口，建议改用异步接口: POST /api/tasks/fix-tests")
     
     try:
         # 创建修复器

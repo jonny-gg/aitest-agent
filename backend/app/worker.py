@@ -192,6 +192,143 @@ async def _execute_task(task_id: str, celery_task):
             return {"error": str(e)}
 
 
+@celery_app.task(bind=True, name="run_test_fix_task")
+def run_test_fix_task(self, task_id: str, fix_config: dict):
+    """
+    执行测试修复任务
+    
+    Args:
+        task_id: 任务ID
+        fix_config: 修复配置
+    """
+    logger.info(f"🔧 开始执行测试修复任务: {task_id}")
+    
+    # 在事件循环中运行异步任务
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(_execute_fix_task(task_id, fix_config, self))
+    
+    return result
+
+
+async def _execute_fix_task(task_id: str, fix_config: dict, celery_task):
+    """执行测试修复的异步函数"""
+    from app.services.test_fixer import TestFixer
+    
+    async with AsyncSessionLocal() as db:
+        try:
+            # 获取任务信息
+            from sqlalchemy import select
+            
+            result = await db.execute(
+                select(Task).where(Task.id == task_id)
+            )
+            task = result.scalar_one_or_none()
+            
+            if not task:
+                logger.error(f"任务不存在: {task_id}")
+                return {"error": "Task not found"}
+            
+            # 更新任务状态
+            task.status = TaskStatus.GENERATING  # 使用 GENERATING 状态表示修复中
+            task.started_at = datetime.utcnow()
+            await db.commit()
+            
+            # 创建进度回调
+            async def progress_callback(progress: int, status: str, message: str):
+                # 更新任务进度
+                task.progress = progress
+                if status in TaskStatus.__members__:
+                    task.status = TaskStatus[status]
+                
+                # 添加日志
+                log = TaskLog(
+                    id=str(uuid4()),
+                    task_id=task_id,
+                    level="INFO",
+                    message=message
+                )
+                db.add(log)
+                await db.commit()
+                
+                # 更新Celery任务状态
+                celery_task.update_state(
+                    state='PROGRESS',
+                    meta={'progress': progress, 'status': status, 'message': message}
+                )
+            
+            # 创建修复器
+            fixer = TestFixer(
+                language=fix_config['language'],
+                test_framework=fix_config['test_framework']
+            )
+            
+            await progress_callback(10, "GENERATING", "开始扫描测试文件...")
+            
+            # 执行异步并发修复
+            fix_result = await fixer.fix_tests_in_directory_async(
+                workspace_path=fix_config['workspace_path'],
+                test_directory=fix_config['test_directory'],
+                max_fix_attempts=fix_config.get('max_fix_attempts', 5),
+                max_concurrent=10,
+                auto_git_commit=fix_config.get('auto_git_commit', False),
+                git_username=fix_config.get('git_username', 'ut-agent'),
+                git_branch_name=fix_config.get('git_branch_name'),
+                git_commit_message=fix_config.get('git_commit_message')
+            )
+            
+            await progress_callback(90, "GENERATING", "修复完成，准备保存结果...")
+            
+            # 更新任务结果
+            if fix_result['success']:
+                task.status = TaskStatus.COMPLETED
+                task.progress = 100
+                task.total_tests = fix_result['total_files']
+                task.passed_tests = fix_result['fixed_files']
+                task.failed_tests = fix_result['failed_files']
+                
+                # 保存详细结果到 coverage_data 字段
+                task.coverage_data = {
+                    'fix_results': fix_result,
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+                
+                if fix_result.get('git_result'):
+                    task.branch = fix_result['git_result'].get('branch')
+                    task.commit_hash = 'fixed'  # 标记为已修复
+                
+                task.completed_at = datetime.utcnow()
+                
+                logger.info(f"✅ 测试修复任务完成: {task_id}")
+                logger.info(f"   总文件: {fix_result['total_files']}")
+                logger.info(f"   已修复: {fix_result['fixed_files']}")
+                logger.info(f"   失败: {fix_result['failed_files']}")
+            else:
+                task.status = TaskStatus.FAILED
+                task.error_message = fix_result.get('message', '修复失败')
+                task.completed_at = datetime.utcnow()
+                
+                logger.error(f"❌ 测试修复任务失败: {task_id}")
+            
+            await db.commit()
+            
+            return {
+                'task_id': task_id,
+                'success': fix_result['success'],
+                'result': fix_result
+            }
+        
+        except Exception as e:
+            logger.error(f"测试修复任务执行异常: {e}", exc_info=True)
+            
+            # 更新任务为失败状态
+            task.status = TaskStatus.FAILED
+            task.error_message = str(e)
+            task.completed_at = datetime.utcnow()
+            await db.commit()
+            
+            return {"error": str(e)}
+
+
 @celery_app.task(name="cleanup_old_tasks")
 def cleanup_old_tasks():
     """清理旧任务（定时任务）"""

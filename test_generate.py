@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 """
-AI Test Agent - 测试生成示例集合
+AI Test Agent - 测试生成客户端
 
-包含多种测试生成场景：
-1. 基础测试生成（Ginkgo框架）- 支持多目录递归
-2. 智能测试生成（基于代码复杂度）- 支持多目录递归
-3. 标准测试生成（go test框架）- 支持多目录递归
+为项目自动生成高质量测试代码。
 
-✨ 多目录支持：所有场景都使用数组形式的 source_directory
-   例如: ["internal/biz", "pkg"] - 自动递归遍历所有子目录
+支持场景：
+1. Ginkgo BDD 测试（推荐用于 Kratos 项目）
+2. 智能测试生成（基于代码复杂度）
+3. 标准 Go Test（传统 table-driven 风格）
+
+特性：
+- ✅ 异步任务，立即返回任务ID
+- ✅ 实时查询进度和状态
+- ✅ 支持多目录递归扫描
+- ✅ 自动生成高质量测试代码
+
+使用方式：
+    python test_generate.py
 """
 
 import requests
